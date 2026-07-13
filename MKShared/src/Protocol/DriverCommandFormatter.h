@@ -8,9 +8,9 @@
 
 #include <Arduino.h>
 
-#include "src/Shared/Protocol.h"
+#include "Protocol/Protocol.h"
 
-namespace MK
+namespace MK::Protocol
 {
 
 class DriverCommandFormatter final

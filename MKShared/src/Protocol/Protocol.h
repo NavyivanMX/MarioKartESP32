@@ -12,7 +12,7 @@
 
 #include <cstdint>
 
-#include "src/Shared/Types.h"
+#include "Types/Types.h"
 
 namespace MK::Protocol
 {

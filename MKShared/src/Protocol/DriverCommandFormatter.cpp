@@ -3,12 +3,12 @@
  * Archivo  : DriverCommandFormatter.cpp
  ******************************************************************************/
 
-#include "src/Shared/DriverCommandFormatter.h"
 
-#include "src/Shared/EnumToString.h"
-#include "src/Shared/ProtocolUtils.h"
+#include "Protocol/DriverCommandFormatter.h"
+#include "Protocol/ProtocolUtils.h"
+#include "Types/Vehicle/EnumToString.h"
 
-namespace MK
+namespace MK::Protocol
 {
 
 String DriverCommandFormatter::Format(

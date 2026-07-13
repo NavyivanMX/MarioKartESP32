@@ -1,0 +1,96 @@
+/******************************************************************************
+ * Proyecto : MarioKart ESP32 RC
+ * Archivo  : Controller.cpp
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Implementación del orquestador principal.
+ ******************************************************************************/
+
+#include "Controller.h"
+
+namespace MK
+{
+
+//=============================================================================
+// Ciclo de vida
+//=============================================================================
+
+bool Controller::Begin()
+{
+    m_consoleLogger.Begin();
+
+    m_consoleLogger.LogBoot();
+
+    m_inputManager.Begin();
+
+m_inputManager.Begin();
+
+if constexpr (!Config::Build::InputTestMode)
+{
+    if (!m_espNowHandler.Begin())
+    {
+        m_consoleLogger.LogError(
+            "ESP-NOW initialization failed.");
+
+        return false;
+    }
+}
+
+m_consoleLogger.LogReady();
+
+return true;
+}
+
+/*void Controller::Update() noexcept
+{
+    m_inputManager.Update();
+
+    const auto& command =
+        m_inputManager.GetDriverCommand();
+
+    m_consoleLogger.Log(command);
+
+    const bool sent =
+        m_espNowHandler.Send(command);
+
+    if (!sent)
+    {
+        m_consoleLogger.LogError(
+            "Packet not sent");
+    }
+}*/
+
+void Controller::Update() noexcept
+{
+    m_inputManager.Update();
+
+    const auto& command =
+        m_inputManager.GetDriverCommand();
+
+    m_consoleLogger.Log(command);
+
+    //----------------------------------------------------------------------
+    // Modo prueba
+    //----------------------------------------------------------------------
+
+    if constexpr (Config::Build::InputTestMode)
+    {
+        return;
+    }
+
+    //----------------------------------------------------------------------
+    // Comunicación
+    //----------------------------------------------------------------------
+
+    const bool sent =
+        m_espNowHandler.Send(command);
+
+    if (!sent)
+    {
+        m_consoleLogger.LogError(
+            "Packet not sent");
+    }
+}
+
+} // namespace MK

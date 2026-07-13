@@ -1,13 +1,14 @@
 MKShared
 
-Shared Arduino Library
+Shared library for:
 
-Contains:
+- MarioKartESP32 Transmitter
+- MarioKartESP32 Receiver
+
+Contents
 
 - Protocol
-
+- Types
+- Config
 - Utilities
-
-- Shared Types
-
-- Common Configuration
+- Core

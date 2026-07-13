@@ -10,13 +10,6 @@
 #ifndef MK_SHARED_TYPES_H
 #define MK_SHARED_TYPES_H
 
-#pragma once
-
-#include <Vehicle/Direction.h>
-#include <Vehicle/DriveMode.h>
-#include <Vehicle/Steering.h>
-#include <Vehicle/Turbo.h>
-
 #include <array>
 #include <cstddef>
 #include <cstdint>

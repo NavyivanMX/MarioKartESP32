@@ -10,7 +10,7 @@
 #ifndef MK_SHARED_DEVICE_CONFIG_H
 #define MK_SHARED_DEVICE_CONFIG_H
 
-#include "Types.h"
+#include "Types/Types.h"
 
 namespace MK::DeviceConfig
 {

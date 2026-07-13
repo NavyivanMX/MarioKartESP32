@@ -9,7 +9,7 @@
 #ifndef MK_SHARED_PROTOCOLUTILS_H
 #define MK_SHARED_PROTOCOLUTILS_H
 
-#include "src/Shared/Protocol.h"
+#include "Protocol.h"
 
 namespace MK::Protocol
 {
