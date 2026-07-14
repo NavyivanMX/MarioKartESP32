@@ -11,16 +11,28 @@
 #ifndef MK_SHARED_ENUMTOSTRING_H
 #define MK_SHARED_ENUMTOSTRING_H
 
-#include "Types/Types.h"
+#include "Types/Vehicle/Direction.h"
+#include "Types/Vehicle/Steering.h"
+#include "Types/Vehicle/Turbo.h"
+#include "Types/Vehicle/DriveMode.h"
 
 namespace MK
 {
 
-// Alias locales para mejorar legibilidad
+//=============================================================================
+// Alias
+//=============================================================================
+
 using Types::Vehicle::Direction;
 using Types::Vehicle::Steering;
 using Types::Vehicle::Turbo;
 using Types::Vehicle::DriveMode;
+
+//=============================================================================
+// Constantes
+//=============================================================================
+
+inline constexpr char UnknownText[] = "Unknown";
 
 //=============================================================================
 // Direction
@@ -39,10 +51,9 @@ inline constexpr const char* ToString(Direction direction) noexcept
 
         case Direction::Reverse:
             return "Reverse";
-
-        default:
-            return "Unknown";
     }
+
+    return UnknownText;
 }
 
 //=============================================================================
@@ -62,10 +73,9 @@ inline constexpr const char* ToString(Steering steering) noexcept
 
         case Steering::Right:
             return "Right";
-
-        default:
-            return "Unknown";
     }
+
+    return UnknownText;
 }
 
 //=============================================================================
@@ -78,14 +88,13 @@ inline constexpr const char* ToString(Turbo turbo) noexcept
     switch (turbo)
     {
         case Turbo::Disabled:
-            return "OFF";
+            return "Disabled";
 
         case Turbo::Enabled:
-            return "ON";
-
-        default:
-            return "Unknown";
+            return "Enabled";
     }
+
+    return UnknownText;
 }
 
 //=============================================================================
@@ -102,10 +111,9 @@ inline constexpr const char* ToString(DriveMode mode) noexcept
 
         case DriveMode::Gravity:
             return "Gravity";
-
-        default:
-            return "Unknown";
     }
+
+    return UnknownText;
 }
 
 } // namespace MK

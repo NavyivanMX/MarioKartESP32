@@ -4,7 +4,7 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Información de versión del firmware.
+ * Información de versión de la librería MKShared y del proyecto.
  ******************************************************************************/
 
 #ifndef MK_SHARED_VERSION_H
@@ -16,7 +16,7 @@ namespace MK::Version
 {
 
 //=============================================================================
-// Firmware
+// Versión
 //=============================================================================
 
 inline constexpr std::uint8_t Major = 1;
@@ -24,13 +24,23 @@ inline constexpr std::uint8_t Minor = 1;
 inline constexpr std::uint8_t Patch = 0;
 
 //=============================================================================
-// Compilación
+// Información de la librería
 //=============================================================================
 
-inline constexpr char Name[] = "MarioKart RC";
-inline constexpr char Project[] = "MarioKart ESP32 RC";
-inline constexpr char Release[] = "RC1.1";
+inline constexpr char Library[] = "MKShared";
+
+//=============================================================================
+// Información del proyecto
+//=============================================================================
+
+inline constexpr char ProjectName[] = "MarioKart ESP32 RC";
+
+inline constexpr char Edition[] = "RC1.1";
+
 inline constexpr char Author[] = "Narciso Ivan Cisneros Acosta";
+
+inline constexpr char Copyright[] =
+    "Copyright (c) 2026 Narciso Ivan Cisneros Acosta";
 
 
 } // namespace MK::Version

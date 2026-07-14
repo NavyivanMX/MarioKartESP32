@@ -12,7 +12,10 @@
 
 #include <cstdint>
 
-#include "Types/Types.h"
+#include "Types/Vehicle/Direction.h"
+#include "Types/Vehicle/Steering.h"
+#include "Types/Vehicle/Turbo.h"
+#include "Types/Vehicle/DriveMode.h"
 
 namespace MK::Protocol
 {
@@ -23,7 +26,7 @@ using Types::Vehicle::Turbo;
 using Types::Vehicle::DriveMode;
 
 //=============================================================================
-// DriverCommand
+// DriverCommand /// Comando enviado por el transmisor al vehículo.
 //=============================================================================
 
 struct DriverCommand
@@ -37,7 +40,13 @@ struct DriverCommand
     DriveMode driveMode{DriveMode::Normal};
 
     constexpr bool operator==(const DriverCommand&) const noexcept = default;
+
+    constexpr bool operator!=(const DriverCommand& other) const noexcept{
+        return !(*this == other);
+    }
 };
+
+static_assert(sizeof(DriverCommand) == 4,"DriverCommand size changed.");
 
 } // namespace MK::Protocol
 

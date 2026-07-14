@@ -13,7 +13,6 @@
 
 #include <esp_wifi.h>
 
-//#include "src/Shared/DeviceConfig.h"
 #include <MKShared.h>
 
 //=============================================================================
@@ -39,8 +38,8 @@ esp_now_peer_info_t CreatePeerInfo()
 
     std::memcpy(
         peer.peer_addr,
-        MK::DeviceConfig::Radio::ReceiverMacAddress.data(),
-        MK::DeviceConfig::Radio::ReceiverMacAddress.size());
+        DeviceConfig::Radio::ReceiverMacAddress.data()
+        DeviceConfig::Radio::ReceiverMacAddress.size());
 
     peer.channel = MK::DeviceConfig::Radio::Channel;
     peer.encrypt = MK::DeviceConfig::Radio::Encryption;

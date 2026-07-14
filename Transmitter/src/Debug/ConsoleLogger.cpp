@@ -11,7 +11,7 @@
 // #include "src/Shared/Version.h"
 
 #include <MKShared.h>
-#include <Protocol/DriverCommandFormatter.h>
+#include <Utilities/DriverCommandFormatter.h>
 #include <Version/Version.h>
 
 namespace MK

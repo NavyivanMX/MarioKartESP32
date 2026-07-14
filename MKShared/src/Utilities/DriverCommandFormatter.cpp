@@ -3,33 +3,36 @@
  * Archivo  : DriverCommandFormatter.cpp
  ******************************************************************************/
 
+#include "Utilities/DriverCommandFormatter.h"
 
-#include "Protocol/DriverCommandFormatter.h"
-#include "Protocol/ProtocolUtils.h"
-#include "Types/Vehicle/EnumToString.h"
+#include "Utilities/DriverCommandUtils.h"
+#include "Utilities/EnumToString.h"
 
-namespace MK::Protocol
+namespace MK
 {
-
+//=============================================================================
+// DriverCommandFormatter
+//=============================================================================
 String DriverCommandFormatter::Format(
     const Protocol::DriverCommand& command)
 {
     String result;
+    result.reserve(48);
 
     result += ToString(command.direction);
 
-    if (Protocol::IsTurning(command))
+    if (IsTurning(command))
     {
         result += F(" + ");
         result += ToString(command.steering);
     }
 
-    if (Protocol::IsTurboEnabled(command))
+    if (IsTurboEnabled(command))
     {
         result += F(" + Turbo");
     }
 
-    if (Protocol::IsGravityMode(command))
+    if (IsGravityMode(command))
     {
         result += F(" + Gravity");
     }

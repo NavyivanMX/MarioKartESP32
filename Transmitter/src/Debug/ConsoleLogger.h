@@ -15,8 +15,6 @@
 #ifndef MK_CONSOLELOGGER_H
 #define MK_CONSOLELOGGER_H
 
-// #include "src/Shared/Protocol.h"
-// #include "src/Shared/Config.h"
 
 #include <MKShared.h>
 

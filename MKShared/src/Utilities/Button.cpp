@@ -7,7 +7,7 @@
  * Implementación de la clase Button.
  ******************************************************************************/
 
-#include "Button.h"
+#include "Utilities/Button.h"
 
 #include <Arduino.h>
 
@@ -27,7 +27,7 @@ Button::Button(std::uint8_t pin)
 // Inicialización
 //=============================================================================
 
-void Button::Begin()
+void Button::Begin() noexcept
 {
     pinMode(m_pin, INPUT_PULLUP);
 
@@ -41,7 +41,7 @@ void Button::Begin()
 // Actualización
 //=============================================================================
 
-void Button::Update()
+void Button::Update() noexcept
 {
     m_previousPressed = m_pressed;
 

@@ -4,13 +4,11 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Encapsula la lectura de un botón físico con debounce por software.
+ * Encapsula la lectura de un botón físico.
  ******************************************************************************/
 
-#ifndef MK_BUTTON_H
-#define MK_BUTTON_H
-
-#include <Arduino.h>
+#ifndef MK_SHARED_BUTTON_H
+#define MK_SHARED_BUTTON_H
 
 #include <cstdint>
 
@@ -23,9 +21,9 @@ public:
 
     explicit Button(std::uint8_t pin);
 
-    void Begin();
+    void Begin() noexcept;
 
-    void Update();
+    void Update() noexcept;
 
     [[nodiscard]]
     bool IsPressed() const noexcept;
@@ -38,7 +36,7 @@ public:
 
 private:
 
-    std::uint8_t m_pin;
+    std::uint8_t m_pin = 0;
 
     bool m_pressed = false;
 
@@ -47,4 +45,4 @@ private:
 
 } // namespace MK
 
-#endif // MK_BUTTON_H
+#endif // MK_SHARED_BUTTON_H
