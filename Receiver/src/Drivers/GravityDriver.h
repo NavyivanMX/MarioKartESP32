@@ -1,29 +1,22 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : GravityController.h
+ * Archivo  : GravityDriver.h
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Controlador del modo Gravity.
- * Coordina el cambio entre los modos de conducción Normal y Gravity,
- * delegando el acceso al hardware al GravityDriver.
+ * Driver del mecanismo de cambio entre los modos de conducción Normal y
+ * Gravity.
  ******************************************************************************/
 
-#ifndef MK_GRAVITY_CONTROLLER_H
-#define MK_GRAVITY_CONTROLLER_H
-
-//=============================================================================
-// Includes
-//=============================================================================
+#ifndef MK_RECEIVER_GRAVITYDRIVER_H
+#define MK_RECEIVER_GRAVITYDRIVER_H
 
 #include <MKShared.h>
-
-#include "src/Drivers/GravityDriver.h"
 
 namespace MK
 {
 
-class GravityController
+class GravityDriver
 {
 public:
 
@@ -31,7 +24,6 @@ public:
     // Ciclo de vida
     //=========================================================================
 
-    /// Inicializa el controlador del modo Gravity.
     [[nodiscard]]
     bool Begin() noexcept;
 
@@ -40,14 +32,10 @@ public:
     //=========================================================================
 
     /// Configura el modo de conducción.
-    void Update(
+    void SetMode(
         Types::Vehicle::DriveMode mode) noexcept;
-
-private:
-
-    GravityDriver m_driver;
 };
 
 } // namespace MK
 
-#endif // MK_GRAVITY_CONTROLLER_H
+#endif // MK_RECEIVER_GRAVITYDRIVER_H

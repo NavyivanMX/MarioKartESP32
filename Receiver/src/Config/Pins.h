@@ -4,11 +4,12 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Define el mapa de pines del Transmitter.
+ * Mapa de pines del Receiver.
+ * Centraliza la asignación de GPIO utilizados por los actuadores del vehículo.
  ******************************************************************************/
 
-#ifndef MK_PINS_H
-#define MK_PINS_H
+#ifndef MK_RECEIVER_PINS_H
+#define MK_RECEIVER_PINS_H
 
 #include <cstdint>
 
@@ -16,25 +17,31 @@ namespace MK::Pins
 {
 
 //=============================================================================
-// Botones de dirección
+// Motor izquierdo
 //=============================================================================
 
-inline constexpr std::uint8_t Forward = 13;
+inline constexpr std::uint8_t LeftMotorIn1 = 26;
 
-inline constexpr std::uint8_t Reverse = 12;
+inline constexpr std::uint8_t LeftMotorIn2 = 27;
 
-inline constexpr std::uint8_t Left = 14;
-
-inline constexpr std::uint8_t Right = 27;
+inline constexpr std::uint8_t LeftMotorPwm = 25;
 
 //=============================================================================
-// Botones auxiliares
+// Motor derecho
 //=============================================================================
 
-inline constexpr std::uint8_t Turbo = 26;
+inline constexpr std::uint8_t RightMotorIn1 = 33;
 
-inline constexpr std::uint8_t Gravity = 25;
+inline constexpr std::uint8_t RightMotorIn2 = 32;
+
+inline constexpr std::uint8_t RightMotorPwm = 14;
+
+//=============================================================================
+// Modo Gravity
+//=============================================================================
+
+inline constexpr std::uint8_t Gravity = 13;
 
 } // namespace MK::Pins
 
-#endif // MK_PINS_H
+#endif // MK_RECEIVER_PINS_H

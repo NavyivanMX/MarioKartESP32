@@ -16,7 +16,7 @@ namespace MK
 // Ciclo de vida
 //=============================================================================
 
-void InputManager::Begin()
+void InputManager::Begin() noexcept
 {
     ForEachButton(
         [](Button& button)
@@ -27,11 +27,11 @@ void InputManager::Begin()
     BuildDriverCommand();
 }
 
-void InputManager::Update()
+bool InputManager::Update() noexcept
 {
     ReadButtons();
 
-    BuildDriverCommand();
+    return BuildDriverCommand();
 }
 
 //=============================================================================
@@ -48,7 +48,7 @@ InputManager::GetDriverCommand() const noexcept
 // Actualización
 //=============================================================================
 
-void InputManager::ReadButtons()
+void InputManager::ReadButtons() noexcept
 {
     ForEachButton(
         [](Button& button)
@@ -57,58 +57,80 @@ void InputManager::ReadButtons()
         });
 }
 
-void InputManager::BuildDriverCommand()
+bool InputManager::BuildDriverCommand() noexcept
 {
-    //
+    Protocol::DriverCommand command{};
+
+    //---------------------------------------------------------------------
     // Dirección longitudinal
-    //
+    //---------------------------------------------------------------------
+
     if (m_forwardButton.IsPressed())
     {
-        m_driverCommand.direction =
+        command.direction =
             Types::Vehicle::Direction::Forward;
     }
     else if (m_reverseButton.IsPressed())
     {
-        m_driverCommand.direction =
+        command.direction =
             Types::Vehicle::Direction::Reverse;
     }
     else
     {
-        m_driverCommand.direction =
+        command.direction =
             Types::Vehicle::Direction::Stop;
     }
 
-    //
+    //---------------------------------------------------------------------
     // Dirección lateral
-    //
+    //---------------------------------------------------------------------
+
     if (m_leftButton.IsPressed())
     {
-        m_driverCommand.steering =
+        command.steering =
             Types::Vehicle::Steering::Left;
     }
     else if (m_rightButton.IsPressed())
     {
-        m_driverCommand.steering =
+        command.steering =
             Types::Vehicle::Steering::Right;
     }
     else
     {
-        m_driverCommand.steering =
+        command.steering =
             Types::Vehicle::Steering::Straight;
     }
 
-    //
+    //---------------------------------------------------------------------
     // Turbo
-    //
-    m_driverCommand.turbo =
+    //---------------------------------------------------------------------
+
+    command.turbo =
         m_turboButton.IsPressed()
             ? Types::Vehicle::Turbo::Enabled
             : Types::Vehicle::Turbo::Disabled;
 
-    m_driverCommand.driveMode =
+    //---------------------------------------------------------------------
+    // Drive Mode
+    //---------------------------------------------------------------------
+
+    command.driveMode =
         m_gravityButton.IsPressed()
             ? Types::Vehicle::DriveMode::Gravity
             : Types::Vehicle::DriveMode::Normal;
+
+    //---------------------------------------------------------------------
+    // Detectar cambios
+    //---------------------------------------------------------------------
+
+    if (command == m_driverCommand)
+    {
+        return false;
     }
+
+    m_driverCommand = command;
+
+    return true;
+}
 
 } // namespace MK

@@ -9,30 +9,40 @@
  * del kart.
  ******************************************************************************/
 
-#pragma once
+#ifndef MK_RECEIVER_VEHICLECONTROLLER_H
+#define MK_RECEIVER_VEHICLECONTROLLER_H
 
 #include <MKShared.h>
 
-#include "src/Vehicle/MotionController.h"
 #include "src/Vehicle/GravityController.h"
+#include "src/Vehicle/MotionController.h"
 
 namespace MK
 {
 
-class VehicleController
+class VehicleController final
 {
 public:
 
-    void Initialize() noexcept;
+    /// Inicializa los subsistemas del vehículo.
+    [[nodiscard]]
+    bool Begin() noexcept;
 
+    /// Actualiza el estado del vehículo a partir del comando recibido.
     void Update(
         const Protocol::DriverCommand& command) noexcept;
 
 private:
+
+    //=========================================================================
+    // Subsistemas
+    //=========================================================================
 
     MotionController m_motion;
 
     GravityController m_gravity;
 };
 
-}
+} // namespace MK
+
+#endif // MK_RECEIVER_VEHICLECONTROLLER_H

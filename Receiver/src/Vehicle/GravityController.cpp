@@ -1,7 +1,10 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : VehicleController.cpp
+ * Archivo  : GravityController.cpp
  * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Implementación del controlador del modo Gravity.
  ******************************************************************************/
 
 #include "src/Vehicle/GravityController.h"
@@ -9,24 +12,39 @@
 namespace MK
 {
 
-    void GravityController::Enable() noexcept
-    {
-        if (m_enabled)
-            return;
+//=============================================================================
+// Ciclo de vida
+//=============================================================================
 
-        m_enabled = true;
-
-        Serial.println("Gravity Mode");
-    }
-
-    void GravityController::Disable() noexcept
-    {
-        if (!m_enabled)
-            return;
-
-        m_enabled = false;
-
-        Serial.println("Normal Mode");
-    }
-
+bool GravityController::Begin() noexcept
+{
+    return m_driver.Begin();
 }
+
+//=============================================================================
+// Control
+//=============================================================================
+
+void GravityController::Update(
+    Types::Vehicle::DriveMode mode) noexcept
+{
+    switch (mode)
+    {
+        case Types::Vehicle::DriveMode::Normal:
+        case Types::Vehicle::DriveMode::Gravity:
+
+            m_driver.SetMode(mode);
+            break;
+
+        default:
+
+            // Cualquier modo desconocido vuelve al modo normal
+            // por seguridad.
+            m_driver.SetMode(
+                Types::Vehicle::DriveMode::Normal);
+
+            break;
+    }
+}
+
+} // namespace MK

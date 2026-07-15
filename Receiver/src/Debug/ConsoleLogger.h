@@ -4,51 +4,74 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Servicio de registro por consola.
- * Centraliza toda la salida Serial del sistema.
+ * Logger de consola del Receiver.
+ * Centraliza todos los mensajes de depuración y diagnóstico del sistema.
  ******************************************************************************/
 
-#pragma once
-
-#include <Arduino.h>
+#ifndef MK_RECEIVER_CONSOLELOGGER_H
+#define MK_RECEIVER_CONSOLELOGGER_H
 
 #include <MKShared.h>
-
-#include "src/Vehicle/MotorState.h"
 
 namespace MK
 {
 
-class ConsoleLogger
+class ConsoleLogger final
 {
 public:
 
-    static ConsoleLogger& Instance() noexcept;
+    //=========================================================================
+    // Ciclo de vida
+    //=========================================================================
 
-    void Initialize() noexcept;
+    /// Inicializa la consola serie.
+    void Begin() noexcept;
 
-    void LogBoot() noexcept;
+    //=========================================================================
+    // Sistema
+    //=========================================================================
 
-    void LogCommand(
-        const Protocol::DriverCommand& command) noexcept;
+    /// Muestra la información de arranque.
+    void LogBoot() const noexcept;
 
-    void LogMotorState(
-        const MotorState& left,
-        const MotorState& right) noexcept;
+    /// Indica que el sistema está listo.
+    void LogReady() const noexcept;
 
-    void LogGravity(
-        bool enabled) noexcept;
-
+    /// Muestra un mensaje de error.
     void LogError(
-        const char* message) noexcept;
+        const char* message) const noexcept;
+
+    //=========================================================================
+    // DriverCommand
+    //=========================================================================
+
+    /// Muestra el DriverCommand recibido.
+    void Log(
+        const Protocol::DriverCommand& command) const noexcept;
 
 private:
 
-    ConsoleLogger() = default;
+    //=========================================================================
+    // Conversión de enums
+    //=========================================================================
 
-    void PrintMotor(
-        const char* name,
-        const MotorState& state) noexcept;
+    [[nodiscard]]
+    static const char* ToString(
+        Types::Vehicle::Direction direction) noexcept;
+
+    [[nodiscard]]
+    static const char* ToString(
+        Types::Vehicle::Steering steering) noexcept;
+
+    [[nodiscard]]
+    static const char* ToString(
+        Types::Vehicle::Turbo turbo) noexcept;
+
+    [[nodiscard]]
+    static const char* ToString(
+        Types::Vehicle::DriveMode mode) noexcept;
 };
 
-}
+} // namespace MK
+
+#endif // MK_RECEIVER_CONSOLELOGGER_H

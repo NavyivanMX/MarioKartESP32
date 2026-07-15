@@ -2,23 +2,23 @@
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : ConsoleLogger.cpp
  * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Implementación del logger de consola.
  ******************************************************************************/
 
 #include "src/Debug/ConsoleLogger.h"
-#include "src/Vehicle/MotorDirectionToString.h"
-#include <Protocol/DriverCommandFormatter.h>
+
+#include <Arduino.h>
 
 namespace MK
 {
 
-    ConsoleLogger& ConsoleLogger::Instance() noexcept
-{
-    static ConsoleLogger instance;
+//=============================================================================
+// Ciclo de vida
+//=============================================================================
 
-    return instance;
-}
-
-void ConsoleLogger::Initialize() noexcept
+void ConsoleLogger::Begin() noexcept
 {
     Serial.begin(115200);
 
@@ -27,78 +27,131 @@ void ConsoleLogger::Initialize() noexcept
     }
 }
 
-void ConsoleLogger::LogBoot() noexcept
+//=============================================================================
+// Sistema
+//=============================================================================
+
+void ConsoleLogger::LogBoot() const noexcept
 {
     Serial.println();
-    Serial.println("========================================");
-    Serial.println("        MarioKart ESP32 Receiver");
-    Serial.println("========================================");
-    Serial.println();
-
-    Serial.print("Version : ");
-    Serial.println(Version::Project);
-
-    Serial.println();
-}
-
-void ConsoleLogger::LogCommand(
-    const Protocol::DriverCommand& command) noexcept
-{
-    Serial.print("INPUT -> ");
-
-    Serial.println(
-        DriverCommandFormatter::Format(command));
-}
-
-void ConsoleLogger::LogMotorState(
-    const MotorState& left,
-    const MotorState& right) noexcept
-{
-    Serial.println("------------- MOTORS -------------");
-
-    PrintMotor("LEFT ", left);
-
-    PrintMotor("RIGHT", right);
-
-    Serial.println("----------------------------------");
-}
-
-void ConsoleLogger::PrintMotor(
-    const char* name,
-    const MotorState& state) noexcept
-{
-    Serial.print(name);
-
-    Serial.print(" : ");
-
-    Serial.print(
-        ToString(state.direction));
-
-    if (state.turbo == Types::Vehicle::Turbo::On)
-    {
-        Serial.print(" + TURBO");
-    }
-
+    Serial.println(F("========================================"));
+    Serial.println(F("MarioKart ESP32 RC"));
+    Serial.println(F("Receiver"));
+    Serial.println(F("Version : 1.1.0"));
+    Serial.println(F("Release : RC1.1"));
+    Serial.println(F("Author  : Narciso Ivan Cisneros Acosta"));
+    Serial.println(F("========================================"));
     Serial.println();
 }
 
-void ConsoleLogger::LogGravity(
-    bool enabled) noexcept
+void ConsoleLogger::LogReady() const noexcept
 {
-    Serial.print("Gravity : ");
-
-    Serial.println(
-        enabled
-            ? "Enabled"
-            : "Normal");
+    Serial.println(F("----------------------------------------"));
+    Serial.println(F("System Ready"));
+    Serial.println(F("----------------------------------------"));
 }
 
 void ConsoleLogger::LogError(
-    const char* message) noexcept
+    const char* message) const noexcept
 {
-    Serial.print("[ERROR] ");
-
+    Serial.print(F("[ERROR] "));
     Serial.println(message);
 }
 
+//=============================================================================
+// DriverCommand
+//=============================================================================
+
+void ConsoleLogger::Log(
+    const Protocol::DriverCommand& command) const noexcept
+{
+    Serial.println();
+
+    Serial.println(F("========== DriverCommand =========="));
+
+    Serial.print(F("Direction : "));
+    Serial.println(ToString(command.direction));
+
+    Serial.print(F("Steering  : "));
+    Serial.println(ToString(command.steering));
+
+    Serial.print(F("Turbo     : "));
+    Serial.println(ToString(command.turbo));
+
+    Serial.print(F("DriveMode : "));
+    Serial.println(ToString(command.driveMode));
+
+    Serial.println(F("==================================="));
 }
+
+//=============================================================================
+// Conversión de enums
+//=============================================================================
+
+const char* ConsoleLogger::ToString(
+    Types::Vehicle::Direction direction) noexcept
+{
+    switch (direction)
+    {
+        case Types::Vehicle::Direction::Stop:
+            return "Stop";
+
+        case Types::Vehicle::Direction::Forward:
+            return "Forward";
+
+        case Types::Vehicle::Direction::Reverse:
+            return "Reverse";
+    }
+
+    return "Unknown";
+}
+
+const char* ConsoleLogger::ToString(
+    Types::Vehicle::Steering steering) noexcept
+{
+    switch (steering)
+    {
+        case Types::Vehicle::Steering::Straight:
+            return "Straight";
+
+        case Types::Vehicle::Steering::Left:
+            return "Left";
+
+        case Types::Vehicle::Steering::Right:
+            return "Right";
+    }
+
+    return "Unknown";
+}
+
+const char* ConsoleLogger::ToString(
+    Types::Vehicle::Turbo turbo) noexcept
+{
+    switch (turbo)
+    {
+        case Types::Vehicle::Turbo::Disabled:
+            return "Disabled";
+
+        case Types::Vehicle::Turbo::Enabled:
+            return "Enabled";
+    }
+
+    return "Unknown";
+}
+
+const char* ConsoleLogger::ToString(
+    Types::Vehicle::DriveMode mode) noexcept
+{
+    switch (mode)
+    {
+        case Types::Vehicle::DriveMode::Normal:
+            return "Normal";
+
+        case Types::Vehicle::DriveMode::Gravity:
+            return "Gravity";
+    }
+
+    return "Unknown";
+}
+
+} // namespace MK

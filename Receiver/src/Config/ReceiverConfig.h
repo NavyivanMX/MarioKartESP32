@@ -1,34 +1,39 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : MotionController.cpp
- * Autor    : Narciso Ivan Cisneros Acosta
+ * Archivo  : ReceiverConfig.h
  *
  * Descripción:
- * Implementación del controlador de movimiento del vehículo.
+ * Configuración específica del vehículo Receiver.
  ******************************************************************************/
 
-#include "src/Vehicle/MotionController.h"
+#ifndef MK_RECEIVER_CONFIG_H
+#define MK_RECEIVER_CONFIG_H
 
-namespace MK
+#include <MKShared.h>
+
+namespace MK::ReceiverConfig
 {
 
 //=============================================================================
-// Ciclo de vida
+// Desarrollo
 //=============================================================================
 
-bool MotionController::Begin() noexcept
+inline constexpr bool HardwareTestMode = true;
+
+//=============================================================================
+// Comunicación
+//=============================================================================
+
+inline constexpr Types::MacAddress TransmitterMacAddress =
 {
-    return m_motor.Begin();
-}
+    0xCC,
+    0xDB,
+    0xA7,
+    0x3D,
+    0xA9,
+    0xF0
+};
 
-//=============================================================================
-// Movimiento
-//=============================================================================
+} // namespace MK::ReceiverConfig
 
-void MotionController::Update(
-    const Protocol::DriverCommand& command) noexcept
-{   
-    m_motor.Drive(command);
-}
-
-} // namespace MK
+#endif

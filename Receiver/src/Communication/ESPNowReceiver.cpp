@@ -5,33 +5,78 @@
  *
  * Descripción:
  * Implementación del receptor ESP-NOW.
- * Se encarga de inicializar la comunicación inalámbrica, recibir los
- * paquetes enviados por el transmisor y almacenarlos para su posterior
- * procesamiento por el ReceiverController.
  ******************************************************************************/
 
 #include "src/Communication/ESPNowReceiver.h"
 
 #include <Arduino.h>
+#include <WiFi.h>
+
+#include <cstring>
+
+#include <esp_now.h>
+#include <esp_wifi.h>
+
+#include <Config/RadioConfig.h>
+#include "src/Config/ReceiverConfig.h"
+
+namespace
+{
+
+//=============================================================================
+// Configuración
+//=============================================================================
+
+#define ESPNOW_DEBUG 1
+
+//=============================================================================
+// Utilidades
+//=============================================================================
+
+[[nodiscard]]
+bool IsSuccess(const esp_err_t result) noexcept
+{
+    return (result == ESP_OK);
+}
+
+} // namespace
 
 namespace MK
 {
 
-//---------------------------------------------------------------------------
+//=============================================================================
 // Variables estáticas
-//---------------------------------------------------------------------------
+//=============================================================================
 
 Protocol::DriverCommand ESPNowReceiver::m_command{};
 
 bool ESPNowReceiver::m_hasNewCommand = false;
 
-//---------------------------------------------------------------------------
-// Inicialización
-//---------------------------------------------------------------------------
+//=============================================================================
+// Ciclo de vida
+//=============================================================================
 
-void ESPNowReceiver::Initialize() noexcept
+bool ESPNowReceiver::Begin() noexcept
 {
-    WiFi.mode(WIFI_STA);
+    Serial.print("DriverCommand size RX: ");
+Serial.println(sizeof(Protocol::DriverCommand));
+    if (!InitializeWiFi())
+    {
+#if ESPNOW_DEBUG
+        Serial.println(F("[ESP-NOW] ERROR: InitializeWiFi()"));
+#endif
+        return false;
+    }
+
+    if (!InitializeESPNow())
+    {
+#if ESPNOW_DEBUG
+        Serial.println(F("[ESP-NOW] ERROR: InitializeESPNow()"));
+#endif
+        return false;
+    }
+
+#if ESPNOW_DEBUG
 
     Serial.println();
     Serial.println(F("========== ESP-NOW RECEIVER =========="));
@@ -42,68 +87,120 @@ void ESPNowReceiver::Initialize() noexcept
     Serial.print(F("Canal    : "));
     Serial.println(WiFi.channel());
 
-    if (esp_now_init() != ESP_OK)
+    Serial.println(F("ESP-NOW inicializado."));
+    Serial.println(F("Esperando paquetes..."));
+    Serial.println(F("======================================"));
+
+#endif
+
+    return true;
+}
+
+//=============================================================================
+// Inicialización
+//=============================================================================
+
+bool ESPNowReceiver::InitializeWiFi() noexcept
+{
+    WiFi.mode(WIFI_STA);
+
+    WiFi.disconnect();
+
+    esp_wifi_set_channel(
+        RadioConfig::Channel,
+        WIFI_SECOND_CHAN_NONE);
+
+    return (WiFi.getMode() == WIFI_STA);
+}
+
+bool ESPNowReceiver::InitializeESPNow() noexcept
+{
+    const esp_err_t result = esp_now_init();
+
+    if (!IsSuccess(result))
     {
-        Serial.println(F("[ERROR] esp_now_init()"));
-        return;
+        return false;
     }
 
     esp_now_register_recv_cb(OnReceive);
 
-    Serial.println(F("ESP-NOW inicializado."));
-    Serial.println(F("Esperando paquetes..."));
-    Serial.println(F("======================================"));
+    return true;
 }
 
-//---------------------------------------------------------------------------
-// Consulta de estado
-//---------------------------------------------------------------------------
+//=============================================================================
+// Comunicación
+//=============================================================================
 
 bool ESPNowReceiver::HasNewCommand() const noexcept
 {
     return m_hasNewCommand;
 }
 
-//---------------------------------------------------------------------------
-// Obtiene el último comando recibido
-//---------------------------------------------------------------------------
-
 const Protocol::DriverCommand&
-ESPNowReceiver::GetCommand() const noexcept
+ESPNowReceiver::GetCommand() noexcept
 {
     m_hasNewCommand = false;
 
     return m_command;
 }
 
-//---------------------------------------------------------------------------
-// Callback de recepción ESP-NOW
-//---------------------------------------------------------------------------
+//=============================================================================
+// Callback ESP-NOW
+//=============================================================================
 
 void ESPNowReceiver::OnReceive(
     const esp_now_recv_info_t* info,
     const uint8_t* data,
     int len)
 {
+
+    Serial.println();
+    Serial.println(F("********** PAQUETE RECIBIDO **********"));
+    //----------------------------------------------------------
+    // Validar longitud del paquete.
+    //----------------------------------------------------------
+
     if (len != sizeof(Protocol::DriverCommand))
     {
-        Serial.println(F("[ESP-NOW] Tamaño de paquete inválido."));
+#if ESPNOW_DEBUG
+        Serial.print(F("[ESP-NOW] Invalid packet size: "));
+        Serial.println(len);
+#endif
         return;
     }
 
-    memcpy(
+    //----------------------------------------------------------
+    // Validar origen.
+    //----------------------------------------------------------
+
+    if (std::memcmp(
+            info->src_addr,
+            ReceiverConfig::TransmitterMacAddress.data(),
+            ReceiverConfig::TransmitterMacAddress.size()) != 0)
+    {
+#if ESPNOW_DEBUG
+        Serial.println(F("[ESP-NOW] Unknown transmitter."));
+#endif
+        return;
+    }
+
+    //----------------------------------------------------------
+    // Copiar comando recibido.
+    //----------------------------------------------------------
+
+    std::memcpy(
         &m_command,
         data,
         sizeof(Protocol::DriverCommand));
 
     m_hasNewCommand = true;
 
-#ifdef MK_DEBUG
+#if ESPNOW_DEBUG
 
     Serial.println();
     Serial.println(F("========== ESP-NOW =========="));
 
-    Serial.print(F("MAC origen : "));
+    Serial.print(F("Origen : "));
 
     for (int i = 0; i < 6; ++i)
     {
@@ -111,13 +208,13 @@ void ESPNowReceiver::OnReceive(
 
         if (i < 5)
         {
-            Serial.print(":");
+            Serial.print(':');
         }
     }
 
     Serial.println();
 
-    Serial.print(F("Longitud   : "));
+    Serial.print(F("Bytes  : "));
     Serial.println(len);
 
     Serial.println(F("============================="));

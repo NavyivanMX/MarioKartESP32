@@ -5,9 +5,11 @@
  *
  * Descripción:
  * Controlador del movimiento del vehículo.
+ * Delega el procesamiento del DriverCommand al MotorController.
  ******************************************************************************/
 
-#pragma once
+#ifndef MK_RECEIVER_MOTIONCONTROLLER_H
+#define MK_RECEIVER_MOTIONCONTROLLER_H
 
 #include <MKShared.h>
 
@@ -16,43 +18,35 @@
 namespace MK
 {
 
-class MotionController
+class MotionController final
 {
 public:
 
-    void Initialize() noexcept;
+    //=========================================================================
+    // Ciclo de vida
+    //=========================================================================
 
+    /// Inicializa el subsistema de movimiento.
+    [[nodiscard]]
+    bool Begin() noexcept;
+
+    //=========================================================================
+    // Movimiento
+    //=========================================================================
+
+    /// Actualiza el movimiento del vehículo.
     void Update(
         const Protocol::DriverCommand& command) noexcept;
 
 private:
-    void Stop() noexcept;
 
-    void Forward(Types::Vehicle::Turbo turbo) noexcept;
-
-    void Backward(Types::Vehicle::Turbo turbo) noexcept;
-
-    void RotateLeft(
-        Types::Vehicle::Turbo turbo) noexcept;
-
-    void RotateRight(
-        Types::Vehicle::Turbo turbo) noexcept;
-
-    void ForwardLeft(
-        Types::Vehicle::Turbo turbo) noexcept;
-
-    void ForwardRight(
-        Types::Vehicle::Turbo turbo) noexcept;
-
-    void BackwardLeft(
-        Types::Vehicle::Turbo turbo) noexcept;
-
-    void BackwardRight(
-        Types::Vehicle::Turbo turbo) noexcept;
-
-private:
+    //=========================================================================
+    // Subsistemas
+    //=========================================================================
 
     MotorController m_motor;
 };
 
-}
+} // namespace MK
+
+#endif // MK_RECEIVER_MOTIONCONTROLLER_H

@@ -4,19 +4,15 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Administra las entradas físicas del transmisor y construye el comando
+ * Administra las entradas físicas del transmisor y construye el DriverCommand
  * que será enviado al vehículo.
  ******************************************************************************/
 
 #ifndef MK_INPUT_MANAGER_H
 #define MK_INPUT_MANAGER_H
 
-// #include "src/Hardware/Button.h"
-// #include "src/Hardware/Pins.h"
-
-// #include "src/Shared/Protocol.h"
-
 #include <MKShared.h>
+
 #include "src/Config/Pins.h"
 
 namespace MK
@@ -26,24 +22,25 @@ class InputManager final
 {
 public:
 
-    InputManager() = default;
-
-    ~InputManager() = default;
-
     //=========================================================================
     // Ciclo de vida
     //=========================================================================
 
-    void Begin();
+    /// Inicializa todos los dispositivos de entrada.
+    void Begin() noexcept;
 
-    void Update();
+    /// Actualiza el estado de las entradas.
+    /// Devuelve true únicamente cuando el DriverCommand cambia.
+    [[nodiscard]]
+    bool Update() noexcept;
 
     //=========================================================================
     // Acceso
     //=========================================================================
 
     [[nodiscard]]
-    const Protocol::DriverCommand& GetDriverCommand() const noexcept;
+    const Protocol::DriverCommand&
+    GetDriverCommand() const noexcept;
 
 private:
 
@@ -51,9 +48,13 @@ private:
     // Actualización
     //=========================================================================
 
-    void ReadButtons();
+    /// Actualiza el estado de todos los botones.
+    void ReadButtons() noexcept;
 
-    void BuildDriverCommand();
+    /// Construye el DriverCommand.
+    /// Devuelve true cuando el comando cambia.
+    [[nodiscard]]
+    bool BuildDriverCommand() noexcept;
 
     template<typename Func>
     void ForEachButton(Func&& func);

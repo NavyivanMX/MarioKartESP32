@@ -8,7 +8,9 @@
  ******************************************************************************/
 
 #include "Controller.h"
+
 #include "src/Config/TransmitterConfig.h"
+
 namespace MK
 {
 
@@ -24,69 +26,64 @@ bool Controller::Begin()
 
     m_inputManager.Begin();
 
-m_inputManager.Begin();
-
-if constexpr (!TransmitterConfig::InputTestMode)
-{
-    if (!m_espNowHandler.Begin())
+    if constexpr (!TransmitterConfig::InputTestMode)
     {
-        m_consoleLogger.LogError(
-            "ESP-NOW initialization failed.");
+        if (!m_espNowHandler.Begin())
+        {
+            m_consoleLogger.LogError(
+                "ESP-NOW initialization failed.");
 
-        return false;
+            return false;
+        }
     }
+
+    m_consoleLogger.LogReady();
+
+    return true;
 }
 
-m_consoleLogger.LogReady();
-
-return true;
-}
-
-/*void Controller::Update() noexcept
-{
-    m_inputManager.Update();
-
-    const auto& command =
-        m_inputManager.GetDriverCommand();
-
-    m_consoleLogger.Log(command);
-
-    const bool sent =
-        m_espNowHandler.Send(command);
-
-    if (!sent)
-    {
-        m_consoleLogger.LogError(
-            "Packet not sent");
-    }
-}*/
+//=============================================================================
+// Ciclo principal
+//=============================================================================
 
 void Controller::Update() noexcept
 {
-    m_inputManager.Update();
+    //---------------------------------------------------------------------
+    // Actualizar entradas
+    //---------------------------------------------------------------------
+
+    if (!m_inputManager.Update())
+    {
+        return;
+    }
+
+    //---------------------------------------------------------------------
+    // Obtener comando
+    //---------------------------------------------------------------------
 
     const auto& command =
         m_inputManager.GetDriverCommand();
 
+    //---------------------------------------------------------------------
+    // Mostrar comando
+    //---------------------------------------------------------------------
+
     m_consoleLogger.Log(command);
 
-    //----------------------------------------------------------------------
+    //---------------------------------------------------------------------
     // Modo prueba
-    //----------------------------------------------------------------------
+    //---------------------------------------------------------------------
 
     if constexpr (TransmitterConfig::InputTestMode)
     {
         return;
     }
 
-    //----------------------------------------------------------------------
+    //---------------------------------------------------------------------
     // Comunicación
-    //----------------------------------------------------------------------
+    //---------------------------------------------------------------------
 
-    const bool sent =
-        m_espNowHandler.Send(command);
-
-    if (!sent)
+    if (!m_espNowHandler.Send(command))
     {
         m_consoleLogger.LogError(
             "Packet not sent");

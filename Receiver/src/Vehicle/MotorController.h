@@ -4,27 +4,61 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Controlador de motores.
- * Recibe el estado deseado para ambos motores y delega
- * la ejecución al HAL.
+ * Controlador del sistema de propulsión.
+ * Interpreta el DriverCommand y determina el estado de cada motor.
  ******************************************************************************/
 
-#pragma once
+#ifndef MK_RECEIVER_MOTORCONTROLLER_H
+#define MK_RECEIVER_MOTORCONTROLLER_H
 
+#include <MKShared.h>
+
+#include "src/Drivers/MotorDriver.h"
 #include "src/Vehicle/MotorState.h"
 
 namespace MK
 {
 
-class MotorController
+class MotorController final
 {
 public:
 
-    void Initialize() noexcept;
+    //=========================================================================
+    // Ciclo de vida
+    //=========================================================================
 
-    void Update(
+    /// Inicializa el subsistema de propulsión.
+    [[nodiscard]]
+    bool Begin() noexcept;
+
+    //=========================================================================
+    // Movimiento
+    //=========================================================================
+
+    /// Procesa el comando recibido y actualiza los motores.
+    void Drive(
+        const Protocol::DriverCommand& command) noexcept;
+
+private:
+
+    //=========================================================================
+    // Aplicación al hardware
+    //=========================================================================
+
+    /// Envía el estado calculado a ambos motores.
+    void Apply(
         const MotorState& left,
         const MotorState& right) noexcept;
+
+private:
+
+    //=========================================================================
+    // Drivers
+    //=========================================================================
+
+    MotorDriver m_driver;
 };
 
-}
+} // namespace MK
+
+#endif // MK_RECEIVER_MOTORCONTROLLER_H

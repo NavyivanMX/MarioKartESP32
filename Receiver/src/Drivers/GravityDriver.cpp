@@ -1,13 +1,12 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : VehicleController.cpp
- * Autor    : Narciso Ivan Cisneros Acosta
- *
- * Descripción:
- * Implementación del orquestador principal del vehículo.
+ * Archivo  : GravityDriver.cpp
  ******************************************************************************/
 
-#include "src/Vehicle/VehicleController.h"
+#include "src/Drivers/GravityDriver.h"
+#include "src/Config/Pins.h"
+#include <Arduino.h>
+
 
 namespace MK
 {
@@ -16,32 +15,28 @@ namespace MK
 // Ciclo de vida
 //=============================================================================
 
-bool VehicleController::Begin() noexcept
+bool GravityDriver::Begin() noexcept
 {
-    if (!m_motion.Begin())
-    {
-        return false;
-    }
+    pinMode(Pins::Gravity, OUTPUT);
 
-    if (!m_gravity.Begin())
-    {
-        return false;
-    }
+    SetMode(Types::Vehicle::DriveMode::Normal);
 
     return true;
 }
 
 //=============================================================================
-// Actualización
+// Control
 //=============================================================================
 
-void VehicleController::Update(
-    const Protocol::DriverCommand& command) noexcept
+void GravityDriver::SetMode(
+    Types::Vehicle::DriveMode mode) noexcept
 {
 
-    m_motion.Update(command);
-
-    m_gravity.Update(command.driveMode);
+    digitalWrite(
+        Pins::Gravity,
+        mode == Types::Vehicle::DriveMode::Gravity
+            ? HIGH
+            : LOW);
 }
 
 } // namespace MK

@@ -23,7 +23,7 @@
 // Cambiar a 0 para desactivar todos los mensajes de diagnóstico.
 //=============================================================================
 
-#define ESPNOW_DEBUG 0
+#define ESPNOW_DEBUG 1
 
 namespace
 {
@@ -31,7 +31,7 @@ namespace
 [[nodiscard]]
 bool IsSuccess(const esp_err_t result) noexcept
 {
-    return IsSuccess(result);
+    return result == ESP_OK;
 }
 
 [[nodiscard]]
@@ -101,6 +101,9 @@ namespace MK
 
 bool ESPNowHandler::Begin()
 {
+    Serial.print("DriverCommand size TX: ");
+Serial.println(sizeof(Protocol::DriverCommand));
+
     if (m_initialized)
     {
         return true;
@@ -173,7 +176,7 @@ bool ESPNowHandler::Send(
 
     const esp_err_t result =
         esp_now_send(
-            TransmitterConfig::ReceiverMacAddress.data(),
+            m_peer.peer_addr,
             reinterpret_cast<const uint8_t*>(&command),
             sizeof(command));
 
@@ -226,6 +229,9 @@ bool ESPNowHandler::InitializeWiFi() noexcept
 bool ESPNowHandler::InitializeESPNow() noexcept
 {
     const esp_err_t result = esp_now_init();
+
+    Serial.print("DriverCommand size TX: ");
+Serial.println(sizeof(Protocol::DriverCommand));
 
 #if ESPNOW_DEBUG
 
