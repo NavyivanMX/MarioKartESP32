@@ -17,6 +17,7 @@
 // #include "src/Shared/Protocol.h"
 
 #include <MKShared.h>
+#include "src/Config/Pins.h"
 
 namespace MK
 {

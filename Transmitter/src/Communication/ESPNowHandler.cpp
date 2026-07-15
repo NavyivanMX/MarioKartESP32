@@ -8,12 +8,15 @@
  ******************************************************************************/
 
 #include "ESPNowHandler.h"
-#include <esp_now.h>
+
 #include <cstring>
 
+#include <esp_now.h>
 #include <esp_wifi.h>
 
 #include <MKShared.h>
+
+#include "src/Config/TransmitterConfig.h"
 
 //=============================================================================
 // DEBUG
@@ -28,7 +31,7 @@ namespace
 [[nodiscard]]
 bool IsSuccess(const esp_err_t result) noexcept
 {
-    return (result == ESP_OK);
+    return IsSuccess(result);
 }
 
 [[nodiscard]]
@@ -38,11 +41,11 @@ esp_now_peer_info_t CreatePeerInfo()
 
     std::memcpy(
         peer.peer_addr,
-        DeviceConfig::Radio::ReceiverMacAddress.data()
-        DeviceConfig::Radio::ReceiverMacAddress.size());
+        MK::TransmitterConfig::ReceiverMacAddress.data(),
+        MK::TransmitterConfig::ReceiverMacAddress.size());
 
-    peer.channel = MK::DeviceConfig::Radio::Channel;
-    peer.encrypt = MK::DeviceConfig::Radio::Encryption;
+    peer.channel = MK::RadioConfig::Channel;
+    peer.encrypt = MK::RadioConfig::Encryption;
 
     return peer;
 }
@@ -170,7 +173,7 @@ bool ESPNowHandler::Send(
 
     const esp_err_t result =
         esp_now_send(
-            DeviceConfig::Radio::ReceiverMacAddress.data(),
+            TransmitterConfig::ReceiverMacAddress.data(),
             reinterpret_cast<const uint8_t*>(&command),
             sizeof(command));
 
@@ -181,7 +184,7 @@ bool ESPNowHandler::Send(
 
 #endif
 
-    return (result == ESP_OK);
+    return IsSuccess(result);
 }
 
 //=============================================================================
@@ -196,7 +199,7 @@ bool ESPNowHandler::InitializeWiFi() noexcept
 
     // Fuerza el canal configurado para ESP-NOW.
     esp_wifi_set_channel(
-        DeviceConfig::Radio::Channel,
+        MK::RadioConfig::Channel,
         WIFI_SECOND_CHAN_NONE);
 
 #if ESPNOW_DEBUG
@@ -253,7 +256,7 @@ bool ESPNowHandler::RegisterPeer() noexcept
 
 #endif
 
-    return (result == ESP_OK);
+    return IsSuccess(result);
 }
 
 //=============================================================================

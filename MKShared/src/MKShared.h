@@ -16,6 +16,7 @@
 #include "Types/Vehicle/Steering.h"
 #include "Types/Vehicle/Turbo.h"
 #include "Types/Vehicle/DriveMode.h"
+#include "Types/Types.h"
 
 //=============================================================================
 // Protocolo

@@ -11,30 +11,25 @@
 
 #include "src/Core/Controller.h"
 
-namespace
-{
+namespace {
 
 MK::Controller g_controller;
 
-} // namespace
+}  // namespace
 
-void setup()
-{
-    if (!g_controller.Begin())
-    {
-        while (true)
-        {
-            // Estado de fallo permanente.
-            // El sistema requiere reinicio manual.
+void setup() {
+  if (!g_controller.Begin()) {
+    while (true) {
+      // Estado de fallo permanente.
+      // El sistema requiere reinicio manual.
 
-            delay(1000);
-        }
+      delay(1000);
     }
+  }
 }
 
-void loop()
-{
-    g_controller.Update();
+void loop() {
+  g_controller.Update();
 
-    delay(MK::Config::System::LoopPeriodMs);
+  delay(MK::Config::System::LoopPeriodMs);
 }

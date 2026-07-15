@@ -1,108 +1,106 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : ConsoleLogger.cpp
+ * Archivo  : ConsoleLogger.h
+ *
+ * Descripción:
+ * Módulo de depuración mediante el puerto serie.
+ *
+ * Responsabilidades:
+ *  - Inicializar Serial.
+ *  - Mostrar información de inicio.
+ *  - Mostrar errores.
+ *  - Registrar cambios en DriverCommand.
  ******************************************************************************/
 
 #include "src/Debug/ConsoleLogger.h"
-
 #include <Arduino.h>
-
-// #include "src/Shared/DriverCommandFormatter.h"
-// #include "src/Shared/Version.h"
-
-#include <MKShared.h>
 #include <Utilities/DriverCommandFormatter.h>
-#include <Version/Version.h>
-
+#include "src/Config/TransmitterConfig.h"
+#include "src/Firmware/Firmware.h"
 namespace MK
 {
-
+//
 //=============================================================================
-
+// Inicialización
+//
+//=============================================================================
 void ConsoleLogger::Begin()
 {
-    Serial.begin(115200);
-
-    while (!Serial)
-    {
-        delay(10);
-    }
+Serial.begin(115200);
+while (!Serial)
+{
+delay(10);
 }
-
+}
+//
 //=============================================================================
-
+// Información de arranque
+//
+//=============================================================================
 void ConsoleLogger::LogBoot()
 {
-    Serial.println();
-    Serial.println(F("========================================"));
-    Serial.println(Version::Project);
+Serial.println();
+Serial.println(F("========================================"));
+Serial.println(Firmware::ProjectName);
+Serial.println(Firmware::FirmwareName);
+Serial.print(F("Version : "));
 
-    Serial.print(F("Release : "));
-    Serial.println(Version::Release);
-
-    Serial.print(F("Build   : "));
-
-    if constexpr (Config::Build::InputTestMode)
-    {
-        Serial.println(F("INPUT TEST"));
-    }
-    else
-    {
-        Serial.println(F("NORMAL"));
-    }
-
-    Serial.println(F("========================================"));
-    Serial.println();
+Serial.println(Firmware::VersionString);
+Serial.print(F("Release : "));
+Serial.println(Firmware::Release);
+Serial.print(F("Author : "));
+Serial.println(Firmware::Author);
+if constexpr (TransmitterConfig::InputTestMode)
+{
+Serial.println(F("Input Test Mode"));
 }
-
+else
+{
+Serial.println(F("ESP-NOW Mode"));
+}
+Serial.println(F("========================================"));
+Serial.println();
+}
+//
 //=============================================================================
-
+// Sistema listo
+//
+//=============================================================================
 void ConsoleLogger::LogReady()
 {
-    Serial.print(F("[READY] "));
-
-    if constexpr (Config::Build::InputTestMode)
-    {
-        Serial.println(F("Input test mode."));
-    }
-    else
-    {
-        Serial.println(F("Controller ready."));
-    }
+Serial.println(F("----------------------------------------"));
+Serial.println(F("System Ready"));
+Serial.println(F("----------------------------------------"));
 }
-
+//
 //=============================================================================
-
+// Errores
+//
+//=============================================================================
 void ConsoleLogger::LogError(const char* message)
 {
-    Serial.print(F("[ERROR] "));
-    Serial.println(message);
+Serial.print(F("[ERROR] "));
+Serial.println(message);
 }
-
+//
 //=============================================================================
-
-void ConsoleLogger::Log(const Protocol::DriverCommand& command)
-{
-    //----------------------------------------------------------
-    // Registrar únicamente cambios.
-    //----------------------------------------------------------
-
-    if (command == m_previousCommand)
-    {
-        return;
-    }
-
-    m_previousCommand = command;
-
-    LogCommand(command);
-}
-
+// Registro de comandos
+//
 //=============================================================================
-
-void ConsoleLogger::LogCommand(const Protocol::DriverCommand& command)
+void ConsoleLogger::Log(const DriverCommand& command)
 {
-    Serial.print(F("[INPUT] "));
-    Serial.println(Protocol::DriverCommandFormatter::Format(command));
+// Registrar únicamente cuando exista un cambio.
+if (command == m_previousCommand)
+{
+return;
 }
-
+m_previousCommand = command;
+LogCommand(command);
+}
+//-----------------------------------------------------------------------------
+void ConsoleLogger::LogCommand(const DriverCommand& command)
+{
+Serial.print(F("[INPUT] "));
+Serial.println(DriverCommandFormatter::Format(command));
+}
 } // namespace MK

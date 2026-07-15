@@ -8,7 +8,7 @@
  ******************************************************************************/
 
 #include "Controller.h"
-
+#include "src/Config/TransmitterConfig.h"
 namespace MK
 {
 
@@ -26,7 +26,7 @@ bool Controller::Begin()
 
 m_inputManager.Begin();
 
-if constexpr (!Config::Build::InputTestMode)
+if constexpr (!TransmitterConfig::InputTestMode)
 {
     if (!m_espNowHandler.Begin())
     {
@@ -74,7 +74,7 @@ void Controller::Update() noexcept
     // Modo prueba
     //----------------------------------------------------------------------
 
-    if constexpr (Config::Build::InputTestMode)
+    if constexpr (TransmitterConfig::InputTestMode)
     {
         return;
     }
