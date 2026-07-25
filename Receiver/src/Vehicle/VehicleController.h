@@ -24,11 +24,17 @@ class VehicleController final
 {
 public:
 
-    /// Inicializa los subsistemas del vehículo.
+    //=========================================================================
+    // Ciclo de vida
+    //=========================================================================
+
     [[nodiscard]]
     bool Begin() noexcept;
 
-    /// Actualiza el estado del vehículo a partir del comando recibido.
+    //=========================================================================
+    // Control
+    //=========================================================================
+
     void Update(
         const Protocol::DriverCommand& command) noexcept;
 
@@ -42,7 +48,6 @@ private:
 
     GravityController m_gravity;
 };
-
 } // namespace MK
 
 #endif // MK_RECEIVER_VEHICLECONTROLLER_H

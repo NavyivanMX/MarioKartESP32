@@ -5,7 +5,10 @@
  *
  * Descripción:
  * Controlador del sistema de propulsión.
- * Interpreta el DriverCommand y determina el estado de cada motor.
+ *
+ * Interpreta el DriverCommand recibido y calcula el estado individual
+ * de cada motor (dirección y potencia), delegando la aplicación física
+ * al MotorDriver.
  ******************************************************************************/
 
 #ifndef MK_RECEIVER_MOTORCONTROLLER_H
@@ -27,7 +30,7 @@ public:
     // Ciclo de vida
     //=========================================================================
 
-    /// Inicializa el subsistema de propulsión.
+    /// Inicializa el sistema de propulsión.
     [[nodiscard]]
     bool Begin() noexcept;
 
@@ -35,17 +38,17 @@ public:
     // Movimiento
     //=========================================================================
 
-    /// Procesa el comando recibido y actualiza los motores.
+    /// Procesa el comando recibido y calcula el estado de ambos motores.
     void Drive(
         const Protocol::DriverCommand& command) noexcept;
 
 private:
 
     //=========================================================================
-    // Aplicación al hardware
+    // Hardware
     //=========================================================================
 
-    /// Envía el estado calculado a ambos motores.
+    /// Envía el estado calculado al driver de hardware.
     void Apply(
         const MotorState& left,
         const MotorState& right) noexcept;

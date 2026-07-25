@@ -38,8 +38,15 @@ bool VehicleController::Begin() noexcept
 void VehicleController::Update(
     const Protocol::DriverCommand& command) noexcept
 {
+    //----------------------------------------------------------
+    // Movimiento
+    //----------------------------------------------------------
 
     m_motion.Update(command);
+
+    //----------------------------------------------------------
+    // Modo Gravity
+    //----------------------------------------------------------
 
     m_gravity.Update(command.driveMode);
 }

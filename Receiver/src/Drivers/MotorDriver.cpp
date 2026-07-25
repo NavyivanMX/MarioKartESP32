@@ -5,6 +5,8 @@
  *
  * Descripción:
  * Implementación del driver de hardware para el sistema de propulsión.
+ * Controla ambos motores mediante un puente H TB6612FNG utilizando
+ * PWM por hardware (LEDC) del ESP32.
  ******************************************************************************/
 
 #include "src/Drivers/MotorDriver.h"
@@ -13,23 +15,6 @@
 
 #include "src/Config/MotorConfig.h"
 #include "src/Config/Pins.h"
-
-namespace
-{
-
-//=============================================================================
-// Utilidades
-//=============================================================================
-
-constexpr std::uint8_t ToPwm(
-    MK::Types::Vehicle::Turbo turbo) noexcept
-{
-    return (turbo == MK::Types::Vehicle::Turbo::Enabled)
-        ? MK::MotorConfig::Pwm::Turbo
-        : MK::MotorConfig::Pwm::Normal;
-}
-
-} // namespace
 
 namespace MK
 {
@@ -40,13 +25,29 @@ namespace MK
 
 bool MotorDriver::Begin() noexcept
 {
+    //---------------------------------------------------------------------
+    // Pines de dirección
+    //---------------------------------------------------------------------
+
     pinMode(Pins::LeftMotorIn1, OUTPUT);
     pinMode(Pins::LeftMotorIn2, OUTPUT);
-    pinMode(Pins::LeftMotorPwm, OUTPUT);
 
     pinMode(Pins::RightMotorIn1, OUTPUT);
     pinMode(Pins::RightMotorIn2, OUTPUT);
-    pinMode(Pins::RightMotorPwm, OUTPUT);
+
+    //---------------------------------------------------------------------
+    // PWM (Arduino ESP32 Core 3.x)
+    //---------------------------------------------------------------------
+
+    ledcAttach(
+        Pins::LeftMotorPwm,
+        MotorConfig::Frequency,
+        MotorConfig::Resolution);
+
+    ledcAttach(
+        Pins::RightMotorPwm,
+        MotorConfig::Frequency,
+        MotorConfig::Resolution);
 
     Stop();
 
@@ -59,26 +60,18 @@ bool MotorDriver::Begin() noexcept
 
 void MotorDriver::Stop() noexcept
 {
-    ApplyMotor(
-        Pins::LeftMotorIn1,
-        Pins::LeftMotorIn2,
-        Pins::LeftMotorPwm,
-        MotorConfig::InvertLeftMotor,
+    SetLeftMotor(
         Types::Vehicle::Direction::Stop,
-        Types::Vehicle::Turbo::Disabled);
+        MotorConfig::Power::Stop);
 
-    ApplyMotor(
-        Pins::RightMotorIn1,
-        Pins::RightMotorIn2,
-        Pins::RightMotorPwm,
-        MotorConfig::InvertRightMotor,
+    SetRightMotor(
         Types::Vehicle::Direction::Stop,
-        Types::Vehicle::Turbo::Disabled);
+        MotorConfig::Power::Stop);
 }
 
 void MotorDriver::SetLeftMotor(
     Types::Vehicle::Direction direction,
-    Types::Vehicle::Turbo turbo) noexcept
+    std::uint8_t power) noexcept
 {
     ApplyMotor(
         Pins::LeftMotorIn1,
@@ -86,12 +79,12 @@ void MotorDriver::SetLeftMotor(
         Pins::LeftMotorPwm,
         MotorConfig::InvertLeftMotor,
         direction,
-        turbo);
+        power);
 }
 
 void MotorDriver::SetRightMotor(
     Types::Vehicle::Direction direction,
-    Types::Vehicle::Turbo turbo) noexcept
+    std::uint8_t power) noexcept
 {
     ApplyMotor(
         Pins::RightMotorIn1,
@@ -99,7 +92,7 @@ void MotorDriver::SetRightMotor(
         Pins::RightMotorPwm,
         MotorConfig::InvertRightMotor,
         direction,
-        turbo);
+        power);
 }
 
 //=============================================================================
@@ -109,20 +102,31 @@ void MotorDriver::SetRightMotor(
 void MotorDriver::ApplyMotor(
     std::uint8_t in1,
     std::uint8_t in2,
-    std::uint8_t enable,
+    std::uint8_t pwmPin,
     bool invert,
     Types::Vehicle::Direction direction,
-    Types::Vehicle::Turbo turbo) noexcept
+    std::uint8_t power) noexcept
 {
     switch (direction)
     {
+        //-----------------------------------------------------------------
+        // Stop
+        //-----------------------------------------------------------------
+
         case Types::Vehicle::Direction::Stop:
 
             digitalWrite(in1, LOW);
             digitalWrite(in2, LOW);
-            analogWrite(enable, 0);
+
+            ledcWrite(
+                pwmPin,
+                MotorConfig::Power::Stop);
 
             return;
+
+        //-----------------------------------------------------------------
+        // Forward
+        //-----------------------------------------------------------------
 
         case Types::Vehicle::Direction::Forward:
 
@@ -138,6 +142,10 @@ void MotorDriver::ApplyMotor(
             }
 
             break;
+
+        //-----------------------------------------------------------------
+        // Reverse
+        //-----------------------------------------------------------------
 
         case Types::Vehicle::Direction::Reverse:
 
@@ -155,9 +163,13 @@ void MotorDriver::ApplyMotor(
             break;
     }
 
-    analogWrite(
-        enable,
-        ToPwm(turbo));
+    //---------------------------------------------------------------------
+    // Potencia
+    //---------------------------------------------------------------------
+
+    ledcWrite(
+        pwmPin,
+        power);
 }
 
 } // namespace MK
