@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#101010"
+    android:padding="24dp">
+
+  <!--========================================================-->
+  <!-- Título -->
+  <!--========================================================-->
+
+  <TextView
+      android:id="@+id/txtTitle"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="MarioKart ESP32 RC"
+      android:textColor="#FFFFFF"
+      android:textStyle="bold"
+      android:textSize="28sp"
+      android:layout_centerHorizontal="true"/>
+
+  <!--========================================================-->
+  <!-- Panel de Control -->
+  <!--========================================================-->
+
+  <LinearLayout
+      android:id="@+id/controlPanel"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:layout_centerHorizontal="true"
+      android:layout_below="@id/txtTitle"
+      android:layout_marginTop="40dp">
+
+    <!-- Adelante -->
+
+    <Button
+        android:id="@+id/btnForward"
+        android:layout_width="120dp"
+        android:layout_height="70dp"
+        android:text="▲"/>
+
+    <!-- Izquierda / Derecha -->
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="20dp">
+
+      <Button
+          android:id="@+id/btnLeft"
+          android:layout_width="120dp"
+          android:layout_height="70dp"
+          android:text="◄"/>
+
+      <Space
+          android:layout_width="40dp"
+          android:layout_height="1dp"/>
+
+      <Button
+          android:id="@+id/btnRight"
+          android:layout_width="120dp"
+          android:layout_height="70dp"
+          android:text="►"/>
+
+    </LinearLayout>
+
+    <!-- Reversa -->
+
+    <Button
+        android:id="@+id/btnReverse"
+        android:layout_width="120dp"
+        android:layout_height="70dp"
+        android:text="▼"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="20dp"/>
+
+  </LinearLayout>
+
+  <!--========================================================-->
+  <!-- Botón Turbo -->
+  <!--========================================================-->
+
+  <Button
+      android:id="@+id/btnTurbo"
+      android:layout_width="140dp"
+      android:layout_height="80dp"
+      android:text="TURBO"
+      android:textStyle="bold"
+      android:textSize="20sp"
+      android:backgroundTint="#D32F2F"
+      android:textColor="#FFFFFF"
+      android:layout_alignParentEnd="true"
+      android:layout_centerVertical="true"/>
+
+  <!--========================================================-->
+  <!-- Estado Bluetooth -->
+  <!--========================================================-->
+
+  <TextView
+      android:id="@+id/txtBluetooth"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="Bluetooth: Desconectado"
+      android:textColor="#FFFFFF"
+      android:textSize="18sp"
+      android:layout_alignParentBottom="true"/>
+
+  <!--========================================================-->
+  <!-- Configuración -->
+  <!--========================================================-->
+
+  <ImageButton
+      android:id="@+id/btnSettings"
+      android:layout_width="56dp"
+      android:layout_height="56dp"
+      android:layout_alignParentBottom="true"
+      android:layout_alignParentEnd="true"
+      android:src="@android:drawable/ic_menu_manage"
+      android:background="@android:color/transparent"/>
+
+</RelativeLayout>

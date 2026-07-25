@@ -1,0 +1,248 @@
+# Android Architecture
+
+Proyecto:
+MarioKart ESP32 RC
+
+Autor:
+Narciso Ivan Cisneros Acosta
+
+---
+
+# Objetivo
+
+Desarrollar una aplicación Android que permita controlar el vehículo
+MarioKart ESP32 mediante una interfaz táctil.
+
+La aplicación deberá generar exactamente el mismo DriverCommand que
+actualmente produce el Transmitter basado en ESP32.
+
+El firmware Receiver NO deberá modificarse para soportar Android.
+
+---
+
+# Filosofía
+
+La aplicación seguirá la misma arquitectura utilizada por el firmware.
+
+Se buscará:
+
+- Alta mantenibilidad.
+- Código desacoplado.
+- Responsabilidad única.
+- Componentes reutilizables.
+- Documentación completa.
+
+---
+
+# Arquitectura
+
+Android
+
+│
+
+├── Views
+
+├── ViewModels
+
+├── Controllers
+
+├── Communication
+
+├── Protocol
+
+├── Services
+
+├── Resources
+
+└── Widgets
+
+---
+
+# Responsabilidades
+
+Views
+
+Contienen únicamente la interfaz gráfica.
+
+No contienen lógica.
+
+---
+
+ViewModels
+
+Representan el estado de la aplicación.
+
+Exponen propiedades para la UI.
+
+No conocen detalles de comunicación.
+
+---
+
+Controllers
+
+Traducen las acciones del usuario
+en DriverCommand.
+
+Ejemplo:
+
+Botón ↑
+
+↓
+
+Direction = Forward
+
+---
+
+Communication
+
+Encapsula toda la comunicación
+con el ESP32.
+
+Inicialmente:
+
+WiFi
+
+Posteriormente:
+
+BLE (opcional)
+
+---
+
+Protocol
+
+Implementa exactamente las mismas
+estructuras del firmware.
+
+Direction
+
+Steering
+
+Turbo
+
+DriveMode
+
+DriverCommand
+
+---
+
+Services
+
+Servicios auxiliares.
+
+Ejemplos:
+
+ConnectionService
+
+SettingsService
+
+StorageService
+
+---
+
+Widgets
+
+Controles reutilizables.
+
+Ejemplo:
+
+DirectionPad
+
+TurboButton
+
+StatusBar
+
+BatteryIndicator
+
+---
+
+# Flujo
+
+Usuario
+
+↓
+
+Touch
+
+↓
+
+DirectionPad
+
+↓
+
+InputController
+
+↓
+
+DriverCommand
+
+↓
+
+WifiClient
+
+↓
+
+ESP32 Receiver
+
+↓
+
+VehicleController
+
+↓
+
+MotorController
+
+↓
+
+MotorDriver
+
+↓
+
+Mario Kart
+
+---
+
+# Objetivos de la versión 1.0
+
+✔ Conexión WiFi
+
+✔ Pantalla horizontal
+
+✔ Botón Avanzar
+
+✔ Botón Reversa
+
+✔ Botón Izquierda
+
+✔ Botón Derecha
+
+✔ Botón Turbo
+
+✔ Indicador de conexión
+
+✔ Configuración
+
+---
+
+# Objetivos futuros
+
+Modo Gravity
+
+OTA
+
+Telemetría
+
+Nivel de batería
+
+Intensidad WiFi
+
+Firmware Update
+
+Logs
+
+Estadísticas
+
+Joystick virtual
+
+Gamepad Bluetooth
+
+Control por acelerómetro
