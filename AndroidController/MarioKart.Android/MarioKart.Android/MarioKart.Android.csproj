@@ -65,7 +65,20 @@
     <Reference Include="System.Numerics.Vectors" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Communication\BluetoothTransport.cs" />
+    <Compile Include="Communication\Bluettoth\BluetoothDeviceInfo.cs" />
+    <Compile Include="Communication\Bluettoth\BluetoothManager.cs" />
+    <Compile Include="Communication\CommunicationManager.cs" />
+    <Compile Include="Communication\DebugTransport.cs" />
+    <Compile Include="Communication\ICommunicationTransport.cs" />
+    <Compile Include="Controllers\DrivingController.cs" />
     <Compile Include="MainActivity.cs" />
+    <Compile Include="Models\DrivingState.cs" />
+    <Compile Include="Protocol\Direction.cs" />
+    <Compile Include="Protocol\DriverCommand.cs" />
+    <Compile Include="Protocol\DriverCommandSerializer.cs" />
+    <Compile Include="Protocol\DriverProtocol.cs" />
+    <Compile Include="Protocol\Steering.cs" />
     <Compile Include="Resources\Resource.designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -101,7 +114,10 @@
     <AndroidResource Include="Resources\mipmap-xxxhdpi\ic_launcher_round.png" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Activities\" />
+    <Folder Include="Helpers\" />
     <Folder Include="Resources\drawable\" />
+    <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Xamarin.AndroidX.AppCompat" Version="1.2.0.5" />
