@@ -7,6 +7,14 @@
  * Controller y Receiver mediante ESP-NOW.
  ******************************************************************************/
 
+ //=============================================================================
+// DriverCommand
+//
+// Representa el comando lógico enviado por el transmisor.
+// El formato binario utilizado para transmitirlo se encuentra definido por
+// DriverCommandSerializer.
+//=============================================================================
+
 #ifndef MK_SHARED_PROTOCOL_H
 #define MK_SHARED_PROTOCOL_H
 

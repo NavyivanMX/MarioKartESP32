@@ -10,6 +10,9 @@
 #ifndef MK_ESP_NOW_HANDLER_H
 #define MK_ESP_NOW_HANDLER_H
 
+#include <cstddef>
+#include <cstdint>
+
 #include <WiFi.h>
 #include <esp_now.h>
 
@@ -39,8 +42,11 @@ public:
     // Comunicación
     //=========================================================================
 
+    /// Envía un paquete binario mediante ESP-NOW.
     [[nodiscard]]
-    bool Send(const Protocol::DriverCommand& command) noexcept;
+    bool Send(
+        const std::uint8_t* packet,
+        std::size_t length) noexcept;
 
 private:
 

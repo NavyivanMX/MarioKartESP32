@@ -58,33 +58,15 @@ void OnDataSent(
 
 #if ESPNOW_DEBUG
 
-    Serial.print("[ESP-NOW] Send callback -> ");
-
     if (status == ESP_NOW_SEND_SUCCESS)
     {
-        Serial.println("SUCCESS");
+        Serial.println(
+            "[ESP-NOW] Packet transmitted successfully.");
     }
     else
     {
-        Serial.print("FAILED (");
-
-        switch (status)
-        {
-            case ESP_NOW_SEND_SUCCESS:
-                Serial.print("SUCCESS");
-                break;
-
-            case ESP_NOW_SEND_FAIL:
-                Serial.print("FAIL");
-                break;
-
-            default:
-                Serial.print(static_cast<int>(status));
-                break;
-        }
-
-        Serial.println(")");
-
+        Serial.println(
+            "[ESP-NOW] Packet transmission FAILED.");
     }
 
 #endif
@@ -101,8 +83,23 @@ namespace MK
 
 bool ESPNowHandler::Begin()
 {
-    Serial.print("DriverCommand size TX: ");
-Serial.println(sizeof(Protocol::DriverCommand));
+#if ESPNOW_DEBUG
+
+    Serial.println();
+    Serial.println("========== MK Protocol ==========");
+
+    Serial.print("Protocol Version : ");
+    Serial.println(
+        Protocol::DriverCommandSerializer::Version);
+
+    Serial.print("Packet Size      : ");
+    Serial.println(
+        Protocol::DriverCommandSerializer::PacketSize);
+
+    Serial.println("=================================");
+    Serial.println();
+
+#endif
 
     if (m_initialized)
     {
@@ -141,7 +138,9 @@ Serial.println(sizeof(Protocol::DriverCommand));
     m_initialized = true;
 
 #if ESPNOW_DEBUG
+
     Serial.println("[ESP-NOW] Initialization completed.");
+
 #endif
 
     return true;
@@ -164,28 +163,46 @@ void ESPNowHandler::End() noexcept
 //=============================================================================
 
 bool ESPNowHandler::Send(
-    const Protocol::DriverCommand& command) noexcept
+    const std::uint8_t* packet,
+    std::size_t length) noexcept
 {
     if (!IsInitialized())
     {
-#if ESPNOW_DEBUG
-        Serial.println("[ESP-NOW] ERROR: Not initialized.");
-#endif
         return false;
     }
 
-    const esp_err_t result =
-        esp_now_send(
-            m_peer.peer_addr,
-            reinterpret_cast<const uint8_t*>(&command),
-            sizeof(command));
+    if ((packet == nullptr) ||
+        (length == 0))
+    {
+        return false;
+    }
 
 #if ESPNOW_DEBUG
 
-    Serial.print("[ESP-NOW] esp_now_send() -> ");
-    Serial.println(result);
+    Serial.print("[ESP-NOW] TX (");
+    Serial.print(length);
+    Serial.print(" bytes): ");
+
+    for (std::size_t i = 0; i < length; ++i)
+    {
+        if (packet[i] < 16)
+        {
+            Serial.print('0');
+        }
+
+        Serial.print(packet[i], HEX);
+        Serial.print(' ');
+    }
+
+    Serial.println();
 
 #endif
+
+    const auto result =
+        esp_now_send(
+            m_peer.peer_addr,
+            packet,
+            length);
 
     return IsSuccess(result);
 }
@@ -200,7 +217,6 @@ bool ESPNowHandler::InitializeWiFi() noexcept
 
     WiFi.disconnect();
 
-    // Fuerza el canal configurado para ESP-NOW.
     esp_wifi_set_channel(
         MK::RadioConfig::Channel,
         WIFI_SECOND_CHAN_NONE);
@@ -228,10 +244,8 @@ bool ESPNowHandler::InitializeWiFi() noexcept
 
 bool ESPNowHandler::InitializeESPNow() noexcept
 {
-    const esp_err_t result = esp_now_init();
-
-    Serial.print("DriverCommand size TX: ");
-Serial.println(sizeof(Protocol::DriverCommand));
+    const esp_err_t result =
+        esp_now_init();
 
 #if ESPNOW_DEBUG
 
@@ -240,7 +254,7 @@ Serial.println(sizeof(Protocol::DriverCommand));
 
 #endif
 
-    if (result != ESP_OK)
+    if (!IsSuccess(result))
     {
         return false;
     }

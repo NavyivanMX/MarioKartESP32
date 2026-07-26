@@ -4,12 +4,12 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Implementación del orquestador principal.
+ * Implementación del orquestador principal del transmisor.
  ******************************************************************************/
 
 #include "Controller.h"
-
 #include "src/Config/TransmitterConfig.h"
+#include <MKShared.h>
 
 namespace MK
 {
@@ -26,7 +26,7 @@ bool Controller::Begin()
 
     m_inputManager.Begin();
 
-    if constexpr (!TransmitterConfig::InputTestMode)
+        if constexpr (!TransmitterConfig::InputTestMode)
     {
         if (!m_espNowHandler.Begin())
         {
@@ -37,19 +37,17 @@ bool Controller::Begin()
         }
     }
 
-    m_consoleLogger.LogReady();
-
-    return true;
+    return m_espNowHandler.Begin();
 }
 
 //=============================================================================
-// Ciclo principal
+// Actualización
 //=============================================================================
 
 void Controller::Update() noexcept
 {
     //---------------------------------------------------------------------
-    // Actualizar entradas
+    // Leer entradas
     //---------------------------------------------------------------------
 
     if (!m_inputManager.Update())
@@ -65,29 +63,32 @@ void Controller::Update() noexcept
         m_inputManager.GetDriverCommand();
 
     //---------------------------------------------------------------------
-    // Mostrar comando
+    // Mostrar en consola
     //---------------------------------------------------------------------
 
     m_consoleLogger.Log(command);
 
     //---------------------------------------------------------------------
-    // Modo prueba
+    // Serializar paquete
     //---------------------------------------------------------------------
 
-    if constexpr (TransmitterConfig::InputTestMode)
+    std::uint8_t packet[
+        Protocol::DriverCommandSerializer::PacketSize];
+
+    if (!Protocol::DriverCommandSerializer::Serialize(
+            command,
+            packet))
     {
         return;
     }
 
     //---------------------------------------------------------------------
-    // Comunicación
+    // Enviar mediante ESP-NOW
     //---------------------------------------------------------------------
 
-    if (!m_espNowHandler.Send(command))
-    {
-        m_consoleLogger.LogError(
-            "Packet not sent");
-    }
+    m_espNowHandler.Send(
+        packet,
+        sizeof(packet));
 }
 
 } // namespace MK
