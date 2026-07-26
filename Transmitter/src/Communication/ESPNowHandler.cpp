@@ -50,26 +50,44 @@ esp_now_peer_info_t CreatePeerInfo()
     return peer;
 }
 
+// void OnDataSent(    const wifi_tx_info_t* tx_info,    esp_now_send_status_t status)
+// {
+//     (void)tx_info;
+
+//     #if ESPNOW_DEBUG
+
+//         if (status == ESP_NOW_SEND_SUCCESS)
+//         {
+//             Serial.println(
+//                 "[ESP-NOW] Packet transmitted successfully.");
+//         }
+//         else
+//         {
+//             Serial.println(
+//                 "[ESP-NOW] Packet transmission FAILED.");
+//         }
+
+//     #endif
+// }
+
 void OnDataSent(
     const wifi_tx_info_t* tx_info,
     esp_now_send_status_t status)
 {
     (void)tx_info;
 
-#if ESPNOW_DEBUG
+    Serial.print("[ESP-NOW] Callback Status: ");
 
     if (status == ESP_NOW_SEND_SUCCESS)
     {
-        Serial.println(
-            "[ESP-NOW] Packet transmitted successfully.");
+        Serial.println("SUCCESS");
     }
     else
     {
-        Serial.println(
-            "[ESP-NOW] Packet transmission FAILED.");
+        Serial.print("FAILED (");
+        Serial.print(static_cast<int>(status));
+        Serial.println(")");
     }
-
-#endif
 }
 
 } // namespace

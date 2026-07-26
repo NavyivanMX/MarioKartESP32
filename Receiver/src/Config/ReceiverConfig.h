@@ -24,15 +24,28 @@ inline constexpr bool HardwareTestMode = true;
 // Comunicación
 //=============================================================================
 
+// inline constexpr Types::MacAddress TransmitterMacAddress =
+// {
+//     0xCC,
+//     0xDB,
+//     0xA7,
+//     0x3D,
+//     0xA9,
+//     0xF0
+// };
+
 inline constexpr Types::MacAddress TransmitterMacAddress =
 {
-    0xCC,
-    0xDB,
-    0xA7,
-    0x3D,
-    0xA9,
-    0xF0
+    0xC0,
+    0x49,
+    0xEF,
+    0xE4,
+    0x72,
+    0x3C
 };
+
+
+inline constexpr bool ValidateTransmitterMac = false;
 
 } // namespace MK::ReceiverConfig
 

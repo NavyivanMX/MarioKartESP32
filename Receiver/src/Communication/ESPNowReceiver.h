@@ -5,8 +5,8 @@
  *
  * Descripción:
  * Encapsula la comunicación inalámbrica mediante ESP-NOW.
- * Se encarga de inicializar el protocolo y almacenar el último
- * comando recibido para su posterior procesamiento.
+ * Se encarga de inicializar el protocolo, recibir paquetes,
+ * deserializarlos y almacenar el último DriverCommand recibido.
  ******************************************************************************/
 
 #ifndef MK_RECEIVER_ESPNOWRECEIVER_H
@@ -57,9 +57,9 @@ private:
     /// Callback invocado por ESP-NOW al recibir un paquete.
     static void OnReceive(
         const esp_now_recv_info_t* info,
-        const uint8_t* data,
-        int len);
-        
+        const std::uint8_t* data,
+        int length);
+
 private:
 
     //=========================================================================
@@ -70,7 +70,7 @@ private:
     bool InitializeWiFi() noexcept;
 
     [[nodiscard]]
-    bool InitializeESPNow() noexcept;        
+    bool InitializeESPNow() noexcept;
 
 private:
 
@@ -78,10 +78,8 @@ private:
     // Estado
     //=========================================================================
 
-    /// Último comando recibido.
     static Protocol::DriverCommand m_command;
 
-    /// Indica si existe un comando nuevo pendiente de procesar.
     static bool m_hasNewCommand;
 };
 

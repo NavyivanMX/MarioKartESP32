@@ -36,7 +36,7 @@ namespace
 [[nodiscard]]
 bool IsSuccess(const esp_err_t result) noexcept
 {
-    return (result == ESP_OK);
+    return result == ESP_OK;
 }
 
 } // namespace
@@ -58,12 +58,28 @@ bool ESPNowReceiver::m_hasNewCommand = false;
 
 bool ESPNowReceiver::Begin() noexcept
 {
-    Serial.print("DriverCommand size RX: ");
-Serial.println(sizeof(Protocol::DriverCommand));
+#if ESPNOW_DEBUG
+
+    Serial.println();
+    Serial.println("========== MK Protocol ==========");
+
+    Serial.print("Protocol Version : ");
+    Serial.println(
+        Protocol::DriverCommandSerializer::Version);
+
+    Serial.print("Packet Size      : ");
+    Serial.println(
+        Protocol::DriverCommandSerializer::PacketSize);
+
+    Serial.println("=================================");
+    Serial.println();
+
+#endif
+
     if (!InitializeWiFi())
     {
 #if ESPNOW_DEBUG
-        Serial.println(F("[ESP-NOW] ERROR: InitializeWiFi()"));
+        Serial.println("[ESP-NOW] ERROR: InitializeWiFi()");
 #endif
         return false;
     }
@@ -71,7 +87,7 @@ Serial.println(sizeof(Protocol::DriverCommand));
     if (!InitializeESPNow())
     {
 #if ESPNOW_DEBUG
-        Serial.println(F("[ESP-NOW] ERROR: InitializeESPNow()"));
+        Serial.println("[ESP-NOW] ERROR: InitializeESPNow()");
 #endif
         return false;
     }
@@ -79,17 +95,17 @@ Serial.println(sizeof(Protocol::DriverCommand));
 #if ESPNOW_DEBUG
 
     Serial.println();
-    Serial.println(F("========== ESP-NOW RECEIVER =========="));
+    Serial.println("========== ESP-NOW RECEIVER ==========");
 
-    Serial.print(F("MAC      : "));
+    Serial.print("MAC      : ");
     Serial.println(WiFi.macAddress());
 
-    Serial.print(F("Canal    : "));
+    Serial.print("Channel  : ");
     Serial.println(WiFi.channel());
 
-    Serial.println(F("ESP-NOW inicializado."));
-    Serial.println(F("Esperando paquetes..."));
-    Serial.println(F("======================================"));
+    Serial.println("ESP-NOW initialized.");
+    Serial.println("Waiting packets...");
+    Serial.println("======================================");
 
 #endif
 
@@ -115,7 +131,8 @@ bool ESPNowReceiver::InitializeWiFi() noexcept
 
 bool ESPNowReceiver::InitializeESPNow() noexcept
 {
-    const esp_err_t result = esp_now_init();
+    const auto result =
+        esp_now_init();
 
     if (!IsSuccess(result))
     {
@@ -151,26 +168,10 @@ ESPNowReceiver::GetCommand() noexcept
 void ESPNowReceiver::OnReceive(
     const esp_now_recv_info_t* info,
     const uint8_t* data,
-    int len)
+    int length)
 {
-
-    Serial.println();
-    Serial.println(F("********** PAQUETE RECIBIDO **********"));
     //----------------------------------------------------------
-    // Validar longitud del paquete.
-    //----------------------------------------------------------
-
-    if (len != sizeof(Protocol::DriverCommand))
-    {
-#if ESPNOW_DEBUG
-        Serial.print(F("[ESP-NOW] Invalid packet size: "));
-        Serial.println(len);
-#endif
-        return;
-    }
-
-    //----------------------------------------------------------
-    // Validar origen.
+    // Validar transmisor
     //----------------------------------------------------------
 
     if (std::memcmp(
@@ -178,46 +179,79 @@ void ESPNowReceiver::OnReceive(
             ReceiverConfig::TransmitterMacAddress.data(),
             ReceiverConfig::TransmitterMacAddress.size()) != 0)
     {
+        #if ESPNOW_DEBUG
+                Serial.println("[ESP-NOW] Unknown transmitter.");
+        #endif
+            return;
+    }
+
+    //----------------------------------------------------------
+    // Validar tamaño
+    //----------------------------------------------------------
+
+    if (length !=
+        Protocol::DriverCommandSerializer::PacketSize)
+    {
 #if ESPNOW_DEBUG
-        Serial.println(F("[ESP-NOW] Unknown transmitter."));
+
+        Serial.print("[ESP-NOW] Invalid packet size: ");
+        Serial.println(length);
+
+#endif
+        return;
+    }
+
+#if ESPNOW_DEBUG
+
+    Serial.print("[ESP-NOW] RX (");
+    Serial.print(length);
+    Serial.print(" bytes): ");
+
+    for (int i = 0; i < length; ++i)
+    {
+        if (data[i] < 16)
+        {
+            Serial.print('0');
+        }
+
+        Serial.print(data[i], HEX);
+        Serial.print(' ');
+    }
+
+    Serial.println();
+
+#endif
+
+    //----------------------------------------------------------
+    // Deserializar
+    //----------------------------------------------------------
+
+    Protocol::DriverCommand command{};
+
+    if (!Protocol::DriverCommandSerializer::Deserialize(
+            data,
+            command))
+    {
+#if ESPNOW_DEBUG
+
+        Serial.println(
+            "[ESP-NOW] Invalid protocol packet.");
+
 #endif
         return;
     }
 
     //----------------------------------------------------------
-    // Copiar comando recibido.
+    // Actualizar comando
     //----------------------------------------------------------
 
-    std::memcpy(
-        &m_command,
-        data,
-        sizeof(Protocol::DriverCommand));
+    m_command = command;
 
     m_hasNewCommand = true;
 
 #if ESPNOW_DEBUG
 
-    Serial.println();
-    Serial.println(F("========== ESP-NOW =========="));
-
-    Serial.print(F("Origen : "));
-
-    for (int i = 0; i < 6; ++i)
-    {
-        Serial.printf("%02X", info->src_addr[i]);
-
-        if (i < 5)
-        {
-            Serial.print(':');
-        }
-    }
-
-    Serial.println();
-
-    Serial.print(F("Bytes  : "));
-    Serial.println(len);
-
-    Serial.println(F("============================="));
+    Serial.println("[ESP-NOW] DriverCommand updated.");
 
 #endif
 }
