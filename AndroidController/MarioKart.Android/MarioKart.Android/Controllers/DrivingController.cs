@@ -1,34 +1,73 @@
-﻿using System.Diagnostics;
+﻿using MarioKart.Android.Communication;
+using MarioKart.Android.Debug;
 using MarioKart.Android.Models;
 using MarioKart.Android.Protocol;
-using MarioKart.Android.Communication;
+using MarioKart.Android.Shared;
+using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace MarioKart.Android.Controllers
 {
+    /// <summary>
+    /// Convierte el estado de la interfaz en un DriverCommand
+    /// y lo envía mediante el transporte activo.
+    /// </summary>
     public sealed class DrivingController
     {
-        public DrivingState State { get; } =            new DrivingState();
+        //---------------------------------------------------------------------
+        // Campos
+        //---------------------------------------------------------------------
 
-        public DriverCommand CurrentCommand { get; } =            new DriverCommand();
+        private readonly CommunicationManager communicationManager;
 
-        private readonly CommunicationManager m_communication =    new CommunicationManager();
-        public void Update()
+        private readonly byte[] packet =
+            new byte[DriverProtocol.PacketSize];
+
+        //---------------------------------------------------------------------
+        // Constructor
+        //---------------------------------------------------------------------
+
+        public DrivingController(
+            CommunicationManager communicationManager)
+        {
+            this.communicationManager = communicationManager;
+        }
+
+        //---------------------------------------------------------------------
+        // Estado
+        //---------------------------------------------------------------------
+
+        public DrivingState State { get; } =
+            new DrivingState();
+
+        public DriverCommand CurrentCommand { get; } =
+            new DriverCommand();
+
+        //---------------------------------------------------------------------
+        // Actualización
+        //---------------------------------------------------------------------
+
+        public async Task UpdateAsync()
         {
             //---------------------------------------------------------
-            // Dirección
+            // Dirección longitudinal
             //---------------------------------------------------------
 
             if (State.Forward)
             {
-                CurrentCommand.Direction = Direction.Forward;
+                CurrentCommand.Direction =
+                    Direction.Forward;
             }
             else if (State.Reverse)
             {
-                CurrentCommand.Direction = Direction.Reverse;
+                CurrentCommand.Direction =
+                    Direction.Reverse;
             }
             else
             {
-                CurrentCommand.Direction = Direction.Stop;
+                CurrentCommand.Direction =
+                    Direction.Stop;
             }
 
             //---------------------------------------------------------
@@ -37,24 +76,61 @@ namespace MarioKart.Android.Controllers
 
             if (State.Left)
             {
-                CurrentCommand.Steering = Steering.Left;
+                CurrentCommand.Steering =
+                    Steering.Left;
             }
             else if (State.Right)
             {
-                CurrentCommand.Steering = Steering.Right;
+                CurrentCommand.Steering =
+                    Steering.Right;
             }
             else
             {
-                CurrentCommand.Steering = Steering.Straight;
+                CurrentCommand.Steering =
+                    Steering.Straight;
             }
 
             //---------------------------------------------------------
             // Turbo
             //---------------------------------------------------------
 
-            CurrentCommand.Turbo = State.Turbo;
+            CurrentCommand.Turbo =
+                State.Turbo
+                    ? Turbo.Enabled
+                    : Turbo.Disabled;
 
-            m_communication.Send(CurrentCommand);
+            //---------------------------------------------------------
+            // Drive Mode
+            //---------------------------------------------------------
+
+            CurrentCommand.DriveMode =
+                State.Gravity
+                    ? DriveMode.Gravity
+                    : DriveMode.Normal;
+
+            //---------------------------------------------------------
+            // Serializar
+            //---------------------------------------------------------
+
+            if (!DriverCommandSerializer.Serialize(
+                    CurrentCommand,
+                    packet))
+            {
+                return;
+            }
+
+            //---------------------------------------------------------
+            // Debug
+            //---------------------------------------------------------
+
+            ConsoleLogger.Log(
+                $"TX: {BitConverter.ToString(packet)}");
+
+            //---------------------------------------------------------
+            // Enviar
+            //---------------------------------------------------------
+
+            await communicationManager.SendAsync(packet);
         }
     }
 }

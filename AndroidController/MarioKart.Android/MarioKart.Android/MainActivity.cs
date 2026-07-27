@@ -1,55 +1,151 @@
 ﻿using Android.App;
 using Android.OS;
-using Android.Runtime;
-using AndroidX.AppCompat.App;
-using MarioKart.Android.Controllers;
-using Android.Widget;
 using Android.Views;
+using Android.Widget;
 
-using MarioKart.Android.Protocol;
+using AndroidX.AppCompat.App;
+
+using MarioKart.Android.Communication;
+using MarioKart.Android.Communication.Bluetooth;
+using MarioKart.Android.Controllers;
+using MarioKart.Android.Debug;
 
 namespace MarioKart.Android
 {
-    [Activity(Label = "@string/app_name", Theme = "@style/AppTheme", MainLauncher = true)]
+    [Activity(        Label = "@string/app_name",        Theme = "@style/AppTheme",        MainLauncher = true)]
     public class MainActivity : AppCompatActivity
     {
-        private readonly DrivingController m_controller =    new DrivingController();
-        private Button m_btnForward;
+        //---------------------------------------------------------------------
+        // Comunicación
+        //---------------------------------------------------------------------
 
-        private Button m_btnReverse;
+        private readonly BluetoothManager bluetoothManager;
 
-        private Button m_btnLeft;
+        private readonly BluetoothDiscovery bluetoothDiscovery;
 
-        private Button m_btnRight;
+        private readonly BluetoothTransport bluetoothTransport;
 
-        private Button m_btnTurbo;
+        private readonly CommunicationManager communicationManager;
+
+        private readonly DrivingController drivingController;
+
+        //---------------------------------------------------------------------
+        // Controles
+        //---------------------------------------------------------------------
+
+        private Button btnForward;
+
+        private Button btnReverse;
+
+        private Button btnLeft;
+
+        private Button btnRight;
+
+        private Button btnTurbo;
+
+        //---------------------------------------------------------------------
+        // Constructor
+        //---------------------------------------------------------------------
+
+        public MainActivity()
+        {
+            bluetoothManager =
+                new BluetoothManager();
+
+            bluetoothDiscovery =
+                new BluetoothDiscovery(
+                    bluetoothManager);
+
+            bluetoothTransport =
+                new BluetoothTransport(
+                    bluetoothManager);
+
+            communicationManager =
+                new CommunicationManager(
+                    bluetoothTransport);
+
+            drivingController =
+                new DrivingController(
+                    communicationManager);
+        }
+
+        //---------------------------------------------------------------------
+        // Ciclo de vida
+        //---------------------------------------------------------------------
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
-            Xamarin.Essentials.Platform.Init(this, savedInstanceState);
-            // Set our view from the "main" layout resource
+
+            Xamarin.Essentials.Platform.Init(
+                this,
+                savedInstanceState);
+
             SetContentView(Resource.Layout.activity_main);
 
-            m_btnForward = FindViewById<Button>(Resource.Id.btnForward);
-            m_btnReverse = FindViewById<Button>(Resource.Id.btnReverse);
-            m_btnLeft = FindViewById<Button>(Resource.Id.btnLeft);
-            m_btnRight = FindViewById<Button>(Resource.Id.btnRight);
-            m_btnTurbo = FindViewById<Button>(Resource.Id.btnTurbo);
+            //-------------------------------------------------------------
+            // Buscar controles
+            //-------------------------------------------------------------
 
-            
-            RegisterButton(m_btnForward, () => m_controller.State.Forward = true, () => m_controller.State.Forward = false);
-            RegisterButton(m_btnReverse, () => m_controller.State.Reverse = true, () => m_controller.State.Reverse = false);
-            RegisterButton(m_btnLeft, () => m_controller.State.Left = true, () => m_controller.State.Left = false);
-            RegisterButton(m_btnRight, () => m_controller.State.Right = true, () => m_controller.State.Right = false);
-            RegisterButton(m_btnTurbo, () => m_controller.State.Turbo = true, () => m_controller.State.Turbo = false);
+            btnForward = FindViewById<Button>(Resource.Id.btnForward);
+
+            btnReverse = FindViewById<Button>(Resource.Id.btnReverse);
+
+            btnLeft = FindViewById<Button>(Resource.Id.btnLeft);
+
+            btnRight = FindViewById<Button>(Resource.Id.btnRight);
+
+            btnTurbo = FindViewById<Button>(Resource.Id.btnTurbo);
+
+            //-------------------------------------------------------------
+            // Registrar botones
+            //-------------------------------------------------------------
+
+            RegisterButton(
+                btnForward,
+                () => drivingController.State.Forward = true,
+                () => drivingController.State.Forward = false);
+
+            RegisterButton(
+                btnReverse,
+                () => drivingController.State.Reverse = true,
+                () => drivingController.State.Reverse = false);
+
+            RegisterButton(
+                btnLeft,
+                () => drivingController.State.Left = true,
+                () => drivingController.State.Left = false);
+
+            RegisterButton(
+                btnRight,
+                () => drivingController.State.Right = true,
+                () => drivingController.State.Right = false);
+
+            RegisterButton(
+                btnTurbo,
+                () => drivingController.State.Turbo = true,
+                () => drivingController.State.Turbo = false);
+
+            //-------------------------------------------------------------
+            // Mostrar dispositivos encontrados (temporal)
+            //-------------------------------------------------------------
+
+            foreach (var device in bluetoothDiscovery.GetPairedDevices())
+            {
+                ConsoleLogger.Log(device.ToString());
+            }
         }
 
+        //---------------------------------------------------------------------
+        // Utilidades
+        //---------------------------------------------------------------------
+
         private void RegisterButton(
-    Button button,
-    System.Action pressed,
-    System.Action released)
+            Button button,
+            System.Action pressed,
+            System.Action released)
         {
-            button.Touch += (sender, e) =>
+            button.Touch += async (sender, e) =>
             {
                 switch (e.Event.Action)
                 {
@@ -57,7 +153,7 @@ namespace MarioKart.Android
 
                         pressed();
 
-                        m_controller.Update();
+                        await drivingController.UpdateAsync();
 
                         break;
 
@@ -65,7 +161,7 @@ namespace MarioKart.Android
 
                         released();
 
-                        m_controller.Update();
+                        await drivingController.UpdateAsync();
 
                         break;
                 }
@@ -73,6 +169,5 @@ namespace MarioKart.Android
                 e.Handled = true;
             };
         }
-
     }
 }

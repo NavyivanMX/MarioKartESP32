@@ -1,4 +1,6 @@
 ﻿
+using MarioKart.Android.Shared;
+
 namespace MarioKart.Android.Protocol
 {
     public sealed class DriverCommand
@@ -7,7 +9,9 @@ namespace MarioKart.Android.Protocol
 
         public Steering Steering { get; set; }
 
-        public bool Turbo { get; set; }
+        public DriveMode DriveMode { get; set; }
+
+        public Turbo Turbo { get; set; }
 
         public override string ToString()
         {

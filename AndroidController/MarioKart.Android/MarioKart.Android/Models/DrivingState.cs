@@ -11,5 +11,6 @@
         public bool Right { get; set; }
 
         public bool Turbo { get; set; }
+        public bool Gravity { get; set; }
     }
 }

@@ -4,38 +4,47 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Definición del protocolo binario utilizado para la comunicación entre
- * Android y el Transmitter ESP32.
+ * Define el formato binario del protocolo DriverCommand.
  ******************************************************************************/
 
 namespace MarioKart.Android.Protocol
 {
-
     public static class DriverProtocol
     {
         //=====================================================================
         // Protocolo
         //=====================================================================
 
-        /// Cabecera del paquete ('M').
-        public const byte Header = 0x4D;
+        /// Primer byte mágico ('M').
+        public const byte MagicByte1 = 0x4D;
+
+        /// Segundo byte mágico ('K').
+        public const byte MagicByte2 = 0x4B;
 
         /// Versión del protocolo.
-        public const byte Version = 0x01;
+        public const byte ProtocolVersion = 0x01;
 
-        /// Tamaño del paquete.
-        public const int PacketSize = 6;
+        /// Tamaño total del paquete.
+        public const int PacketSize = 8;
 
         //=====================================================================
         // Índices
         //=====================================================================
 
-        public const int HeaderIndex = 0;
-        public const int VersionIndex = 1;
-        public const int DirectionIndex = 2;
-        public const int SteeringIndex = 3;
-        public const int TurboIndex = 4;
-        public const int ChecksumIndex = 5;
-    }
+        public const int MagicByte1Index = 0;
 
+        public const int MagicByte2Index = 1;
+
+        public const int VersionIndex = 2;
+
+        public const int DirectionIndex = 3;
+
+        public const int SteeringIndex = 4;
+
+        public const int TurboIndex = 5;
+
+        public const int DriveModeIndex = 6;
+
+        public const int ChecksumIndex = 7;
+    }
 }

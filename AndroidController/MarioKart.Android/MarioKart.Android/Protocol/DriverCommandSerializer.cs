@@ -9,51 +9,77 @@
 
 namespace MarioKart.Android.Protocol
 {
-
     public static class DriverCommandSerializer
     {
-        //=========================================================================
+        //=====================================================================
         // Serialización
-        //=========================================================================
+        //=====================================================================
 
-        public static byte[] Serialize(
-            DriverCommand command)
+        public static bool Serialize(
+            DriverCommand command,
+            byte[] buffer)
         {
-            var packet = new byte[DriverProtocol.PacketSize];
+            if (buffer == null)
+            {
+                return false;
+            }
 
-            packet[DriverProtocol.HeaderIndex] =
-                DriverProtocol.Header;
+            if (buffer.Length < DriverProtocol.PacketSize)
+            {
+                return false;
+            }
 
-            packet[DriverProtocol.VersionIndex] =
-                DriverProtocol.Version;
+            //-------------------------------------------------------------
+            // Cabecera
+            //-------------------------------------------------------------
 
-            packet[DriverProtocol.DirectionIndex] =
+            buffer[DriverProtocol.MagicByte1Index] =
+                DriverProtocol.MagicByte1;
+
+            buffer[DriverProtocol.MagicByte2Index] =
+                DriverProtocol.MagicByte2;
+
+            buffer[DriverProtocol.VersionIndex] =
+                DriverProtocol.ProtocolVersion;
+
+            //-------------------------------------------------------------
+            // DriverCommand
+            //-------------------------------------------------------------
+
+            buffer[DriverProtocol.DirectionIndex] =
                 (byte)command.Direction;
 
-            packet[DriverProtocol.SteeringIndex] =
+            buffer[DriverProtocol.SteeringIndex] =
                 (byte)command.Steering;
 
-            packet[DriverProtocol.TurboIndex] =
-                command.Turbo
-                    ? (byte)1
-                    : (byte)0;
+            buffer[DriverProtocol.TurboIndex] =
+                (byte)command.Turbo;
 
-            packet[DriverProtocol.ChecksumIndex] =
-                CalculateChecksum(packet);
+            buffer[DriverProtocol.DriveModeIndex] =
+                (byte)command.DriveMode;
 
-            return packet;
+            //-------------------------------------------------------------
+            // Checksum
+            //-------------------------------------------------------------
+
+            buffer[DriverProtocol.ChecksumIndex] =
+                CalculateChecksum(buffer);
+
+            return true;
         }
 
-        //=========================================================================
+        //=====================================================================
         // Checksum
-        //=========================================================================
+        //=====================================================================
 
         private static byte CalculateChecksum(
             byte[] packet)
         {
             byte checksum = 0;
 
-            for (int i = 0; i < DriverProtocol.ChecksumIndex; i++)
+            for (int i = 0;
+                 i < DriverProtocol.ChecksumIndex;
+                 ++i)
             {
                 checksum ^= packet[i];
             }
@@ -61,5 +87,4 @@ namespace MarioKart.Android.Protocol
             return checksum;
         }
     }
-
 }
