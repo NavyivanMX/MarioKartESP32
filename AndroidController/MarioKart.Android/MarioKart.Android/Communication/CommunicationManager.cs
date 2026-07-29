@@ -1,15 +1,23 @@
-﻿using System;
+﻿/******************************************************************************
+ * Proyecto : MarioKart ESP32 RC
+ * Archivo  : CommunicationManager.cs
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Orquesta el transporte de comunicación utilizado por la aplicación.
+ ******************************************************************************/
+
+using System;
 using System.Threading.Tasks;
 
 using Android.Bluetooth;
 
-using MarioKart.Android.Communication.Bluetooth;
-using BluetoothManager = MarioKart.Android.Communication.Bluetooth.BluetoothManager;
-
 namespace MarioKart.Android.Communication
 {
     /// <summary>
-    /// Administra el transporte de comunicación activo.
+    /// Punto central de acceso al transporte de comunicación.
+    /// Orquesta la conexión y el intercambio de datos sin conocer
+    /// la implementación concreta del transporte.
     /// </summary>
     public sealed class CommunicationManager
     {
@@ -17,58 +25,47 @@ namespace MarioKart.Android.Communication
         // Campos
         //---------------------------------------------------------------------
 
-        private readonly BluetoothManager bluetoothManager;
-
-        private readonly BluetoothTransport bluetoothTransport;
-
-        private ICommunicationTransport activeTransport;
+        private readonly ICommunicationTransport m_transport;
 
         //---------------------------------------------------------------------
         // Constructor
         //---------------------------------------------------------------------
 
-        public CommunicationManager(            BluetoothTransport bluetoothTransport)
+        public CommunicationManager(
+            ICommunicationTransport transport)
         {
-            this.bluetoothTransport = bluetoothTransport;
-            activeTransport = bluetoothTransport;
+            m_transport =
+                transport
+                ?? throw new ArgumentNullException(
+                    nameof(transport));
         }
 
         //---------------------------------------------------------------------
         // Estado
         //---------------------------------------------------------------------
 
-        public bool IsConnected =>  activeTransport?.IsConnected ?? false;
+        public bool IsConnected =>
+            m_transport.IsConnected;
 
         //---------------------------------------------------------------------
-        // Acceso
-        //---------------------------------------------------------------------
-
-        public ICommunicationTransport Transport =>            activeTransport;
-
-        //---------------------------------------------------------------------
-        // Bluetooth
+        // Conexión
         //---------------------------------------------------------------------
 
         public async Task<bool> ConnectBluetoothAsync(
             BluetoothDevice device)
         {
-            return await bluetoothTransport
-                .ConnectAsync(device);
-        }
+            if (device == null)
+            {
+                return false;
+            }
 
-        //---------------------------------------------------------------------
-        // Desconexión
-        //---------------------------------------------------------------------
+            return await
+                m_transport.ConnectAsync(device);
+        }
 
         public async Task DisconnectAsync()
         {
-            if (activeTransport == null)
-            {
-                return;
-            }
-
-            await activeTransport
-                .DisconnectAsync();
+            await m_transport.DisconnectAsync();
         }
 
         //---------------------------------------------------------------------
@@ -76,27 +73,37 @@ namespace MarioKart.Android.Communication
         //---------------------------------------------------------------------
 
         public async Task SendAsync(
-            byte[] data)
+            byte[] packet)
         {
+            if (packet == null)
+            {
+                return;
+            }
+
             if (!IsConnected)
             {
                 return;
             }
 
-            await activeTransport
-                .SendAsync(data);
+            await m_transport.SendAsync(
+                packet);
         }
 
         public async Task<int> ReceiveAsync(
             byte[] buffer)
         {
+            if (buffer == null)
+            {
+                return 0;
+            }
+
             if (!IsConnected)
             {
                 return 0;
             }
 
-            return await activeTransport
-                .ReceiveAsync(buffer);
+            return await m_transport.ReceiveAsync(
+                buffer);
         }
     }
 }

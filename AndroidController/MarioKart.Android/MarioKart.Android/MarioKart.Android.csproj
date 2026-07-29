@@ -72,8 +72,18 @@
     <Compile Include="Communication\Bluettoth\BluetoothManager.cs" />
     <Compile Include="Communication\CommunicationManager.cs" />
     <Compile Include="Communication\DebugTransport.cs" />
+    <Compile Include="Communication\DriverCommandSender.cs" />
     <Compile Include="Communication\ICommunicationTransport.cs" />
     <Compile Include="Controllers\DrivingController.cs" />
+    <Compile Include="Controls\FloatingButton.cs" />
+    <Compile Include="Controls\FloatingButtonAnimator.cs" />
+    <Compile Include="Controls\FloatingButtonDrawable.cs" />
+    <Compile Include="Controls\FloatingButtonGlow.cs" />
+    <Compile Include="Controls\FloatingButtonShadow.cs" />
+    <Compile Include="Controls\FloatingButtonStyle.cs" />
+    <Compile Include="Controls\FloatingButtonStyles.cs" />
+    <Compile Include="Controls\GlowDrawable.cs" />
+    <Compile Include="Controls\ShadowDrawable.cs" />
     <Compile Include="Debug\ConsoleLogger.cs" />
     <Compile Include="MainActivity.cs" />
     <Compile Include="Models\DrivingState.cs" />
@@ -86,6 +96,7 @@
     <Compile Include="Resources\Resource.designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shared\Turbo.cs" />
+    <Compile Include="UI\BluetoothDeviceDialog.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\AboutResources.txt" />
@@ -121,15 +132,40 @@
   <ItemGroup>
     <Folder Include="Activities\" />
     <Folder Include="Helpers\" />
-    <Folder Include="Resources\drawable\" />
     <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Xamarin.AndroidX.AppCompat" Version="1.2.0.5" />
+    <PackageReference Include="Xamarin.AndroidX.ConstraintLayout">
+      <Version>2.0.2</Version>
+    </PackageReference>
     <PackageReference Include="Xamarin.Google.Android.Material" Version="1.0.0.1" />
     <PackageReference Include="Xamarin.Essentials" Version="1.6.1" />
   </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\drawable\ic_reverse.png" />
+    <AndroidResource Include="Resources\drawable\ic_forward.png" />
+    <AndroidResource Include="Resources\drawable\ICON.png" />
+    <AndroidResource Include="Resources\drawable\ic_right.png" />
+    <AndroidResource Include="Resources\drawable\ic_left.png" />
+    <AndroidResource Include="Resources\drawable\ic_mushroom.png" />
+    <AndroidResource Include="Resources\drawable\ic_bluetooth.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\drawable\ic_settings.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\drawable\fondo_main.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\drawable\fondo_main_blur.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties XamarinHotReloadWrongLinkerErrorInfoBarMarioKartAndroidHideInfoBar="True" />
+    </VisualStudio>
+  </ProjectExtensions>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
     Other similar extension points exist, see Microsoft.Common.targets.
     <Target Name="BeforeBuild">

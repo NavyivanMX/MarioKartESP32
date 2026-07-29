@@ -7,10 +7,18 @@
  * Convierte un DriverCommand al formato binario definido por DriverProtocol.
  ******************************************************************************/
 
+
 namespace MarioKart.Android.Protocol
 {
+
+
     public static class DriverCommandSerializer
     {
+        //---------------------------------------------------------------------
+        // Constantes
+        //---------------------------------------------------------------------
+
+        public const int PacketSize = DriverProtocol.PacketSize;
         //=====================================================================
         // Serialización
         //=====================================================================

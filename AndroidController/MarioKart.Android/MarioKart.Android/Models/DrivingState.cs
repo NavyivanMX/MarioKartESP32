@@ -1,16 +1,60 @@
-﻿namespace MarioKart.Android.Models
+﻿/******************************************************************************
+ * Proyecto : MarioKart ESP32 RC
+ * Archivo  : DrivingState.cs
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Representa el estado actual del vehículo.
+ ******************************************************************************/
+
+using MarioKart.Android.Shared;
+
+namespace MarioKart.Android.Models
 {
     public sealed class DrivingState
     {
-        public bool Forward { get; set; }
+        //---------------------------------------------------------------------
+        // Dirección longitudinal
+        //---------------------------------------------------------------------
 
-        public bool Reverse { get; set; }
+        public Direction Direction
+        {
+            get;
+            set;
+        }
+        = Direction.Stop;
 
-        public bool Left { get; set; }
+        //---------------------------------------------------------------------
+        // Dirección lateral
+        //---------------------------------------------------------------------
 
-        public bool Right { get; set; }
+        public Steering Steering
+        {
+            get;
+            set;
+        }
+        = Steering.Center;
 
-        public bool Turbo { get; set; }
-        public bool Gravity { get; set; }
+        //---------------------------------------------------------------------
+        // Turbo
+        //---------------------------------------------------------------------
+
+        public Turbo Turbo
+        {
+            get;
+            set;
+        }
+        = Turbo.Disabled;
+
+        //---------------------------------------------------------------------
+        // Modo de conducción
+        //---------------------------------------------------------------------
+
+        public DriveMode DriveMode
+        {
+            get;
+            set;
+        }
+        = DriveMode.Normal;
     }
 }

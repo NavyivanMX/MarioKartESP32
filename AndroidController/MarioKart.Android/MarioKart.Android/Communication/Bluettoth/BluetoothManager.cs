@@ -1,29 +1,27 @@
 ﻿/******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : BluetoothManager.cs
+ *
+ * Descripción:
+ * Administra la conexión Bluetooth Classic (RFCOMM) con el ESP32.
  ******************************************************************************/
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 using Android.Bluetooth;
 
+using MarioKart.Android.Debug;
+
 namespace MarioKart.Android.Communication.Bluetooth
 {
-    /// <summary>
-    /// Administra la conexión Bluetooth con el ESP32.
-    /// No conoce el protocolo ni DriverCommand.
-    /// Únicamente administra el socket Bluetooth.
-    /// </summary>
     public sealed class BluetoothManager
     {
         //---------------------------------------------------------------------
         // Constantes
         //---------------------------------------------------------------------
 
-        /// <summary>
-        /// UUID estándar para Bluetooth Serial Port Profile (SPP).
-        /// </summary>
         private static readonly Java.Util.UUID SerialPortUuid =
             Java.Util.UUID.FromString(
                 "00001101-0000-1000-8000-00805F9B34FB");
@@ -42,7 +40,8 @@ namespace MarioKart.Android.Communication.Bluetooth
 
         public BluetoothManager()
         {
-            adapter = BluetoothAdapter.DefaultAdapter;
+            adapter =
+                BluetoothAdapter.DefaultAdapter;
         }
 
         //---------------------------------------------------------------------
@@ -58,20 +57,24 @@ namespace MarioKart.Android.Communication.Bluetooth
         public bool IsConnected =>
             socket?.IsConnected ?? false;
 
-        public BluetoothSocket Socket => socket;
-
         //---------------------------------------------------------------------
         // Conexión
         //---------------------------------------------------------------------
 
-        public async Task<bool> ConnectAsync(BluetoothDevice device)
+        public async Task<bool> ConnectAsync(
+            BluetoothDevice device)
         {
             if (device == null)
+            {
                 return false;
+            }
 
             try
             {
                 Disconnect();
+
+                ConsoleLogger.Log(
+                    $"Connecting to {device.Name}...");
 
                 socket =
                     device.CreateRfcommSocketToServiceRecord(
@@ -81,10 +84,15 @@ namespace MarioKart.Android.Communication.Bluetooth
 
                 await socket.ConnectAsync();
 
+                ConsoleLogger.Log(
+                    $"Connected to {device.Name}");
+
                 return socket.IsConnected;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                ConsoleLogger.Exception(ex);
+
                 Disconnect();
 
                 return false;
@@ -102,19 +110,69 @@ namespace MarioKart.Android.Communication.Bluetooth
             }
 
             socket?.Dispose();
+
             socket = null;
+
+            ConsoleLogger.Log(
+                "Bluetooth disconnected.");
+        }
+
+        //---------------------------------------------------------------------
+        // Comunicación
+        //---------------------------------------------------------------------
+
+        public bool Send(byte[] packet)
+        {
+            if (!IsConnected)
+            {
+                ConsoleLogger.Warning(
+                    "Bluetooth not connected.");
+
+                return false;
+            }
+
+            if (packet == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                Stream stream =
+                    socket.OutputStream;
+
+                stream.Write(
+                    packet,
+                    0,
+                    packet.Length);
+
+                stream.Flush();
+
+                ConsoleLogger.Log(
+                    $"Bluetooth TX ({packet.Length} bytes)");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ConsoleLogger.Exception(ex);
+
+                Disconnect();
+
+                return false;
+            }
         }
 
         //---------------------------------------------------------------------
         // Streams
         //---------------------------------------------------------------------
 
-        public System.IO.Stream GetInputStream()
+        public Stream GetInputStream()
         {
             return socket?.InputStream;
         }
 
-        public System.IO.Stream GetOutputStream()
+        public Stream GetOutputStream()
         {
             return socket?.OutputStream;
         }

@@ -1,35 +1,38 @@
-﻿using System;
+﻿/******************************************************************************
+ * Proyecto : MarioKart ESP32 RC
+ * Archivo  : BluetoothTransport.cs
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Implementación de ICommunicationTransport utilizando Bluetooth Classic.
+ ******************************************************************************/
+
 using System.IO;
 using System.Threading.Tasks;
 
 using Android.Bluetooth;
 
+using MarioKart.Android.Debug;
+
 namespace MarioKart.Android.Communication.Bluetooth
 {
-    /// <summary>
-    /// Transporte Bluetooth del protocolo MarioKart.
-    /// Se encarga únicamente de enviar y recibir bytes.
-    /// No conoce DriverCommand ni el protocolo.
-    /// </summary>
-    public sealed class BluetoothTransport : ICommunicationTransport
+    public sealed class BluetoothTransport
+        : ICommunicationTransport
     {
         //---------------------------------------------------------------------
         // Campos
         //---------------------------------------------------------------------
 
-        private readonly BluetoothManager manager;
-
-        private Stream inputStream;
-
-        private Stream outputStream;
+        private readonly BluetoothManager m_bluetoothManager;
 
         //---------------------------------------------------------------------
         // Constructor
         //---------------------------------------------------------------------
 
-        public BluetoothTransport(BluetoothManager manager)
+        public BluetoothTransport(
+            BluetoothManager bluetoothManager)
         {
-            this.manager = manager;
+            m_bluetoothManager = bluetoothManager;
         }
 
         //---------------------------------------------------------------------
@@ -37,7 +40,7 @@ namespace MarioKart.Android.Communication.Bluetooth
         //---------------------------------------------------------------------
 
         public bool IsConnected =>
-            manager.IsConnected;
+            m_bluetoothManager.IsConnected;
 
         //---------------------------------------------------------------------
         // Conexión
@@ -46,67 +49,57 @@ namespace MarioKart.Android.Communication.Bluetooth
         public async Task<bool> ConnectAsync(
             BluetoothDevice device)
         {
-            bool connected =
-                await manager.ConnectAsync(device);
-
-            if (!connected)
-            {
-                return false;
-            }
-
-            inputStream =
-                manager.Socket.InputStream;
-
-            outputStream =
-                manager.Socket.OutputStream;
-
-            return true;
+            return await m_bluetoothManager
+                .ConnectAsync(device);
         }
 
         public Task DisconnectAsync()
         {
-            inputStream = null;
-
-            outputStream = null;
-
-            manager.Disconnect();
+            m_bluetoothManager.Disconnect();
 
             return Task.CompletedTask;
         }
 
         //---------------------------------------------------------------------
-        // Envío
+        // Comunicación
         //---------------------------------------------------------------------
 
         public async Task SendAsync(
-            byte[] data)
+            byte[] packet)
         {
+            if (packet == null)
+            {
+                return;
+            }
+
             if (!IsConnected)
             {
+                ConsoleLogger.Warning(
+                    "BluetoothTransport: no active connection.");
+
                 return;
             }
 
-            if (data == null)
+            Stream stream =
+                m_bluetoothManager.GetOutputStream();
+
+            if (stream == null)
             {
                 return;
             }
 
-            if (data.Length == 0)
+            try
             {
-                return;
+                await stream.WriteAsync(
+                    packet,
+                    0,
+                    packet.Length);
             }
-
-            await outputStream.WriteAsync(
-                data,
-                0,
-                data.Length);
-
-            await outputStream.FlushAsync();
+            catch
+            {
+                await DisconnectAsync();
+            }
         }
-
-        //---------------------------------------------------------------------
-        // Recepción
-        //---------------------------------------------------------------------
 
         public async Task<int> ReceiveAsync(
             byte[] buffer)
@@ -116,15 +109,27 @@ namespace MarioKart.Android.Communication.Bluetooth
                 return 0;
             }
 
-            if (buffer == null)
+            Stream stream =
+                m_bluetoothManager.GetInputStream();
+
+            if (stream == null)
             {
                 return 0;
             }
 
-            return await inputStream.ReadAsync(
-                buffer,
-                0,
-                buffer.Length);
+            try
+            {
+                return await stream.ReadAsync(
+                    buffer,
+                    0,
+                    buffer.Length);
+            }
+            catch
+            {
+                await DisconnectAsync();
+
+                return 0;
+            }
         }
     }
 }

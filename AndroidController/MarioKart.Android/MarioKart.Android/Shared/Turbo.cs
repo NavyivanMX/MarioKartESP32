@@ -12,7 +12,6 @@ namespace MarioKart.Android.Shared
     public enum Turbo : byte
     {
         Disabled = 0,
-
         Enabled = 1
     }
 }

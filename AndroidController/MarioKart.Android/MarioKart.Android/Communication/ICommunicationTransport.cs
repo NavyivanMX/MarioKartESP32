@@ -1,44 +1,44 @@
-﻿using System.Threading.Tasks;
+﻿/******************************************************************************
+ * Proyecto : MarioKart ESP32 RC
+ * Archivo  : ICommunicationTransport.cs
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Define el contrato para cualquier medio de comunicación utilizado
+ * por la aplicación (Bluetooth, WiFi, USB, etc.).
+ ******************************************************************************/
+
+using System.Threading.Tasks;
+
+using Android.Bluetooth;
 
 namespace MarioKart.Android.Communication
 {
-    /// <summary>
-    /// Define el contrato para cualquier medio de comunicación
-    /// utilizado por la aplicación.
-    /// </summary>
     public interface ICommunicationTransport
     {
         //---------------------------------------------------------------------
         // Estado
         //---------------------------------------------------------------------
 
-        /// <summary>
-        /// Indica si el transporte se encuentra conectado.
-        /// </summary>
         bool IsConnected { get; }
 
         //---------------------------------------------------------------------
-        // Ciclo de vida
+        // Conexión
         //---------------------------------------------------------------------
 
-        /// <summary>
-        /// Finaliza la conexión con el dispositivo remoto.
-        /// </summary>
+        Task<bool> ConnectAsync(
+            BluetoothDevice device);
+
         Task DisconnectAsync();
 
         //---------------------------------------------------------------------
         // Comunicación
         //---------------------------------------------------------------------
 
-        /// <summary>
-        /// Envía un bloque de datos.
-        /// </summary>
-        Task SendAsync(byte[] data);
+        Task SendAsync(
+            byte[] packet);
 
-        /// <summary>
-        /// Recibe un bloque de datos.
-        /// Devuelve la cantidad de bytes recibidos.
-        /// </summary>
-        Task<int> ReceiveAsync(byte[] buffer);
+        Task<int> ReceiveAsync(
+            byte[] buffer);
     }
 }
