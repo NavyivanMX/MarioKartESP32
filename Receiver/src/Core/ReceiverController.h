@@ -9,7 +9,7 @@
  ******************************************************************************/
 
 #ifndef MK_RECEIVER_CONTROLLER_H
-#define MK_RECEIVER_CONTROLLER_H
+#define MK_RECEIVER_CONTROLLER_H 
 
 //=============================================================================
 // Includes
