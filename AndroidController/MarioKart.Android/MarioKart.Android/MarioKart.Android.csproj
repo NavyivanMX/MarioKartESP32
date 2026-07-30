@@ -19,7 +19,7 @@
     <AndroidResgenClass>Resource</AndroidResgenClass>
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
     <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
-    <TargetFrameworkVersion>v10.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v12.0</TargetFrameworkVersion>
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <MonoAndroidResourcePrefix>Resources</MonoAndroidResourcePrefix>
     <MonoAndroidAssetsPrefix>Assets</MonoAndroidAssetsPrefix>
@@ -67,6 +67,7 @@
   <ItemGroup>
     <Compile Include="Communication\Bluettoth\BluetoothConnection.cs" />
     <Compile Include="Communication\Bluettoth\BluetoothDiscovery.cs" />
+    <Compile Include="Communication\Bluettoth\BluetoothPermissionManager.cs" />
     <Compile Include="Communication\Bluettoth\BluetoothTransport.cs" />
     <Compile Include="Communication\Bluettoth\BluetoothDeviceInfo.cs" />
     <Compile Include="Communication\Bluettoth\BluetoothManager.cs" />

@@ -1,12 +1,4 @@
-﻿/******************************************************************************
- * Proyecto : MarioKart ESP32 RC
- * Archivo  : BluetoothTransport.cs
- * Autor    : Narciso Ivan Cisneros Acosta
- *
- * Descripción:
- * Implementación de ICommunicationTransport utilizando Bluetooth Classic.
- ******************************************************************************/
-
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -20,38 +12,39 @@ namespace MarioKart.Android.Communication.Bluetooth
         : ICommunicationTransport
     {
         //---------------------------------------------------------------------
-        // Campos
-        //---------------------------------------------------------------------
 
         private readonly BluetoothManager m_bluetoothManager;
 
-        //---------------------------------------------------------------------
-        // Constructor
         //---------------------------------------------------------------------
 
         public BluetoothTransport(
             BluetoothManager bluetoothManager)
         {
-            m_bluetoothManager = bluetoothManager;
+            if (bluetoothManager == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(bluetoothManager));
+            }
+
+            m_bluetoothManager =
+                bluetoothManager;
         }
 
-        //---------------------------------------------------------------------
-        // Propiedades
         //---------------------------------------------------------------------
 
         public bool IsConnected =>
             m_bluetoothManager.IsConnected;
 
         //---------------------------------------------------------------------
-        // Conexión
-        //---------------------------------------------------------------------
 
-        public async Task<bool> ConnectAsync(
+        public Task<bool> ConnectAsync(
             BluetoothDevice device)
         {
-            return await m_bluetoothManager
+            return m_bluetoothManager
                 .ConnectAsync(device);
         }
+
+        //---------------------------------------------------------------------
 
         public Task DisconnectAsync()
         {
@@ -60,8 +53,6 @@ namespace MarioKart.Android.Communication.Bluetooth
             return Task.CompletedTask;
         }
 
-        //---------------------------------------------------------------------
-        // Comunicación
         //---------------------------------------------------------------------
 
         public async Task SendAsync(
@@ -94,12 +85,21 @@ namespace MarioKart.Android.Communication.Bluetooth
                     packet,
                     0,
                     packet.Length);
+
+                await stream.FlushAsync();
+
+                ConsoleLogger.Log(
+                    $"TX [{packet.Length}] : {BitConverter.ToString(packet)}");
             }
-            catch
+            catch (Exception ex)
             {
+                ConsoleLogger.Exception(ex);
+
                 await DisconnectAsync();
             }
         }
+
+        //---------------------------------------------------------------------
 
         public async Task<int> ReceiveAsync(
             byte[] buffer)
@@ -119,13 +119,24 @@ namespace MarioKart.Android.Communication.Bluetooth
 
             try
             {
-                return await stream.ReadAsync(
-                    buffer,
-                    0,
-                    buffer.Length);
+                int count =
+                    await stream.ReadAsync(
+                        buffer,
+                        0,
+                        buffer.Length);
+
+                if (count > 0)
+                {
+                    ConsoleLogger.Log(
+                        $"RX [{count}] : {BitConverter.ToString(buffer, 0, count)}");
+                }
+
+                return count;
             }
-            catch
+            catch (Exception ex)
             {
+                ConsoleLogger.Exception(ex);
+
                 await DisconnectAsync();
 
                 return 0;

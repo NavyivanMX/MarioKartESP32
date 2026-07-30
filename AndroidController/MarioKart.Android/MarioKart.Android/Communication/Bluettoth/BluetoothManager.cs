@@ -1,6 +1,7 @@
 ﻿/******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : BluetoothManager.cs
+ * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
  * Administra la conexión Bluetooth Classic (RFCOMM) con el ESP32.
@@ -30,9 +31,12 @@ namespace MarioKart.Android.Communication.Bluetooth
         // Campos
         //---------------------------------------------------------------------
 
-        private readonly BluetoothAdapter adapter;
+        private readonly BluetoothAdapter m_adapter;
 
-        private BluetoothSocket socket;
+        private readonly object m_syncRoot =
+            new object();
+
+        private BluetoothSocket m_socket;
 
         //---------------------------------------------------------------------
         // Constructor
@@ -40,7 +44,7 @@ namespace MarioKart.Android.Communication.Bluetooth
 
         public BluetoothManager()
         {
-            adapter =
+            m_adapter =
                 BluetoothAdapter.DefaultAdapter;
         }
 
@@ -49,13 +53,19 @@ namespace MarioKart.Android.Communication.Bluetooth
         //---------------------------------------------------------------------
 
         public bool IsBluetoothAvailable =>
-            adapter != null;
+            m_adapter != null;
 
         public bool IsBluetoothEnabled =>
-            adapter?.IsEnabled ?? false;
+            m_adapter?.IsEnabled ?? false;
 
         public bool IsConnected =>
-            socket?.IsConnected ?? false;
+            m_socket?.IsConnected ?? false;
+
+        /// <summary>
+        /// Expone el socket únicamente para inspección.
+        /// </summary>
+        public BluetoothSocket Socket =>
+            m_socket;
 
         //---------------------------------------------------------------------
         // Conexión
@@ -69,6 +79,14 @@ namespace MarioKart.Android.Communication.Bluetooth
                 return false;
             }
 
+            if (!IsBluetoothAvailable)
+            {
+                ConsoleLogger.Warning(
+                    "Bluetooth adapter not available.");
+
+                return false;
+            }
+
             try
             {
                 Disconnect();
@@ -76,80 +94,26 @@ namespace MarioKart.Android.Communication.Bluetooth
                 ConsoleLogger.Log(
                     $"Connecting to {device.Name}...");
 
-                socket =
+                m_socket =
                     device.CreateRfcommSocketToServiceRecord(
                         SerialPortUuid);
 
-                adapter.CancelDiscovery();
+                m_adapter.CancelDiscovery();
 
-                await socket.ConnectAsync();
+                await m_socket.ConnectAsync();
+
+                if (!m_socket.IsConnected)
+                {
+                    ConsoleLogger.Warning(
+                        "Bluetooth connection failed.");
+
+                    Disconnect();
+
+                    return false;
+                }
 
                 ConsoleLogger.Log(
                     $"Connected to {device.Name}");
-
-                return socket.IsConnected;
-            }
-            catch (Exception ex)
-            {
-                ConsoleLogger.Exception(ex);
-
-                Disconnect();
-
-                return false;
-            }
-        }
-
-        public void Disconnect()
-        {
-            try
-            {
-                socket?.Close();
-            }
-            catch
-            {
-            }
-
-            socket?.Dispose();
-
-            socket = null;
-
-            ConsoleLogger.Log(
-                "Bluetooth disconnected.");
-        }
-
-        //---------------------------------------------------------------------
-        // Comunicación
-        //---------------------------------------------------------------------
-
-        public bool Send(byte[] packet)
-        {
-            if (!IsConnected)
-            {
-                ConsoleLogger.Warning(
-                    "Bluetooth not connected.");
-
-                return false;
-            }
-
-            if (packet == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                Stream stream =
-                    socket.OutputStream;
-
-                stream.Write(
-                    packet,
-                    0,
-                    packet.Length);
-
-                stream.Flush();
-
-                ConsoleLogger.Log(
-                    $"Bluetooth TX ({packet.Length} bytes)");
 
                 return true;
             }
@@ -164,17 +128,48 @@ namespace MarioKart.Android.Communication.Bluetooth
         }
 
         //---------------------------------------------------------------------
+
+        public void Disconnect()
+        {
+            lock (m_syncRoot)
+            {
+                try
+                {
+                    m_socket?.Close();
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    m_socket?.Dispose();
+                }
+                catch
+                {
+                }
+
+                m_socket = null;
+            }
+
+            ConsoleLogger.Log(
+                "Bluetooth disconnected.");
+        }
+
+        //---------------------------------------------------------------------
         // Streams
         //---------------------------------------------------------------------
 
         public Stream GetInputStream()
         {
-            return socket?.InputStream;
+            return m_socket?.InputStream;
         }
+
+        //---------------------------------------------------------------------
 
         public Stream GetOutputStream()
         {
-            return socket?.OutputStream;
+            return m_socket?.OutputStream;
         }
     }
 }

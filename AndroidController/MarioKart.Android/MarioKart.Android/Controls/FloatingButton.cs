@@ -250,7 +250,9 @@ namespace MarioKart.Android.Controls
 
                         break;
                 }
+                e.Handled = false;
             };
+            
         }
     }
 }

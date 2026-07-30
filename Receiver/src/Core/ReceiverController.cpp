@@ -4,10 +4,12 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Implementación del orquestador principal del firmware Receiver.
+ * Controlador principal del Receiver.
  ******************************************************************************/
 
-#include "src/Core/ReceiverController.h"
+#include "ReceiverController.h"
+
+#include "src/Config/BluetoothConfig.h"
 
 namespace MK
 {
@@ -18,25 +20,61 @@ namespace MK
 
 bool ReceiverController::Begin() noexcept
 {
+    //-------------------------------------------------------------
+    // Consola
+    //-------------------------------------------------------------
+
     m_logger.Begin();
 
-    m_logger.LogBoot();
-
-    if (!m_receiver.Begin())
-    {
-        m_logger.LogError(
-            "ESPNowReceiver initialization failed.");
-
-        return false;
-    }
+    //-------------------------------------------------------------
+    // Vehículo
+    //-------------------------------------------------------------
 
     if (!m_vehicle.Begin())
     {
         m_logger.LogError(
-            "VehicleController initialization failed.");
+            "Vehicle initialization failed.");
 
         return false;
     }
+
+    //-------------------------------------------------------------
+    // Bluetooth
+    //-------------------------------------------------------------
+
+    if (!m_bluetooth.Initialize(
+            Config::BluetoothConfig::DeviceName))
+    {
+        m_logger.LogError(
+            "Bluetooth initialization failed.");
+
+        return false;
+    }
+
+    //-------------------------------------------------------------
+    // ESP-NOW
+    //-------------------------------------------------------------
+
+    if (!m_receiver.Begin())
+    {
+        m_logger.LogError(
+            "ESP-NOW initialization failed.");
+
+        return false;
+    }
+
+    //-------------------------------------------------------------
+    // Ahora ya existe la interfaz WiFi
+    //-------------------------------------------------------------
+
+    m_logger.LogBoot();
+
+    m_logger.LogBluetooth(
+        Config::BluetoothConfig::DeviceName);
+
+    //-------------------------------------------------------------
+    // Sistema listo
+    //-------------------------------------------------------------
 
     m_logger.LogReady();
 
@@ -44,22 +82,36 @@ bool ReceiverController::Begin() noexcept
 }
 
 //=============================================================================
-// Ciclo principal
+// Update
 //=============================================================================
 
 void ReceiverController::Update() noexcept
 {
-    
-    if (!m_receiver.HasNewCommand())
+    //-------------------------------------------------------------
+    // Bluetooth tiene prioridad
+    //-------------------------------------------------------------
+
+    Protocol::DriverCommand command;
+
+    if (m_bluetooth.Receive(command))
     {
+        m_logger.Log(command);
+
+        m_vehicle.Update(command);
+
         return;
     }
 
-    const auto& command = m_receiver.GetCommand();
+    //-------------------------------------------------------------
+    // ESP-NOW
+    //-------------------------------------------------------------
 
-    m_vehicle.Update(command);
+    if (m_receiver.Receive(command))
+    {
+        m_logger.Log(command);
 
-    m_logger.Log(command);
+        m_vehicle.Update(command);
+    }
 }
 
 } // namespace MK

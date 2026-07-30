@@ -42,6 +42,20 @@ public:
         const char* message) const noexcept;
 
     //=========================================================================
+    // Comunicación
+    //=========================================================================
+
+    /// Muestra la dirección MAC WiFi del ESP32.
+    void LogWiFiMac() const noexcept;
+
+    /// Muestra el nombre Bluetooth del dispositivo.
+    void LogBluetooth(
+        const char* deviceName) const noexcept;
+
+    /// Indica que un cliente Bluetooth se conectó.
+    void LogBluetoothConnected() const noexcept;
+
+    //=========================================================================
     // DriverCommand
     //=========================================================================
 

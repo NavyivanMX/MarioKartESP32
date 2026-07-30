@@ -10,6 +10,7 @@
 #include "src/Debug/ConsoleLogger.h"
 
 #include <Arduino.h>
+#include <WiFi.h>
 
 namespace MK
 {
@@ -42,6 +43,14 @@ void ConsoleLogger::LogBoot() const noexcept
     Serial.println(F("Author  : Narciso Ivan Cisneros Acosta"));
     Serial.println(F("========================================"));
     Serial.println();
+
+    //---------------------------------------------------------------------
+    // Información del sistema
+    //---------------------------------------------------------------------
+
+    LogWiFiMac();
+
+    Serial.println();
 }
 
 void ConsoleLogger::LogReady() const noexcept
@@ -56,6 +65,28 @@ void ConsoleLogger::LogError(
 {
     Serial.print(F("[ERROR] "));
     Serial.println(message);
+}
+
+//=============================================================================
+// Comunicación
+//=============================================================================
+
+void ConsoleLogger::LogWiFiMac() const noexcept
+{
+    Serial.print(F("WiFi MAC   : "));
+    Serial.println(WiFi.macAddress());
+}
+
+void ConsoleLogger::LogBluetooth(
+    const char* deviceName) const noexcept
+{
+    Serial.print(F("Bluetooth  : "));
+    Serial.println(deviceName);
+}
+
+void ConsoleLogger::LogBluetoothConnected() const noexcept
+{
+    Serial.println(F("[Bluetooth] Client connected."));
 }
 
 //=============================================================================

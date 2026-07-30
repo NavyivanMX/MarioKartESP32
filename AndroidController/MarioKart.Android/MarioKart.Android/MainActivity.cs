@@ -3,20 +3,20 @@
  * Archivo  : MainActivity.cs
  ******************************************************************************/
 
-using System;
 using Android.App;
+using Android.Content.PM;
+using Android.Graphics;
 using Android.OS;
 using Android.Widget;
-using Android.Graphics;
-
 using MarioKart.Android.Communication;
 using MarioKart.Android.Communication.Bluetooth;
 using MarioKart.Android.Controllers;
 using MarioKart.Android.Controls;
+using MarioKart.Android.Debug;
 using MarioKart.Android.Shared;
 using MarioKart.Android.UI;
+using System;
 using System.Threading.Tasks;
-using Android.Content.PM;
 
 namespace MarioKart.Android
 {
@@ -61,6 +61,12 @@ namespace MarioKart.Android
         private BluetoothDiscovery m_discovery;
 
         //---------------------------------------------------------------------
+        // Permisos
+        //---------------------------------------------------------------------
+
+        private BluetoothPermissionManager m_permissionManager;
+
+        //---------------------------------------------------------------------
         // Lógica
         //---------------------------------------------------------------------
 
@@ -73,6 +79,7 @@ namespace MarioKart.Android
         protected override void OnCreate(
             Bundle savedInstanceState)
         {
+          
             base.OnCreate(savedInstanceState);
 
             SetContentView(
@@ -131,6 +138,9 @@ namespace MarioKart.Android
 
         private void InitializeCommunication()
         {
+            m_permissionManager =
+                new BluetoothPermissionManager(this);
+
             m_bluetoothManager =
                 new BluetoothManager();
 
@@ -245,9 +255,48 @@ namespace MarioKart.Android
         }
         //---------------------------------------------------------------------
 
+        //private async Task ShowBluetoothDialogAsync()
+        //{
+        //    BluetoothDeviceDialog dialog =
+        //        new BluetoothDeviceDialog(
+        //            this,
+        //            m_discovery);
+
+        //    BluetoothDeviceInfo device =
+        //        await dialog.SelectDeviceAsync();
+
+        //    if (device == null)
+        //    {
+        //        return;
+        //    }
+
+        //    await ConnectBluetoothAsync(device);
+        //}
+
         private async Task ShowBluetoothDialogAsync()
         {
-            BluetoothDeviceDialog dialog =
+            //---------------------------------------------------------
+            // Permisos
+            //---------------------------------------------------------
+            ConsoleLogger.Log("RequestPermissionsAsync()");
+            //ShowMessage($"SDK: {(int)Build.VERSION.SdkInt}");
+            bool granted =
+                await m_permissionManager
+                    .RequestPermissionsAsync();
+
+            if (!granted)
+            {
+                ShowMessage(
+                    "Bluetooth permission denied.");
+
+                return;
+            }
+
+            //---------------------------------------------------------
+            // Continuar...
+            //---------------------------------------------------------
+
+            var dialog =
                 new BluetoothDeviceDialog(
                     this,
                     m_discovery);
@@ -542,6 +591,34 @@ namespace MarioKart.Android
                 message,
                 ToastLength.Short)
                 .Show();
+        }
+
+        //=====================================================================
+        // Request Permissions
+        //=====================================================================
+        public override void OnRequestPermissionsResult(
+
+    int requestCode,
+
+    string[] permissions,
+
+    Permission[] grantResults)
+        {
+            ConsoleLogger.Log("Permissions callback!");
+            base.OnRequestPermissionsResult(
+
+                requestCode,
+
+                permissions,
+
+                grantResults);
+
+            m_permissionManager
+                .CompletePermissionRequest(
+
+                    requestCode,
+
+                    grantResults);
         }
 
         //=====================================================================

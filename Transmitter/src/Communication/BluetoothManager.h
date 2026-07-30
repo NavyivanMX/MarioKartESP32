@@ -40,7 +40,7 @@ public:
     //=========================================================================
 
     [[nodiscard]]
-    bool IsConnected() const noexcept;
+    bool IsConnected() noexcept;
 
     [[nodiscard]]
     bool Receive(

@@ -7,18 +7,21 @@
  * Convierte un DriverCommand al formato binario definido por DriverProtocol.
  ******************************************************************************/
 
+using System;
+
+using MarioKart.Android.Shared;
 
 namespace MarioKart.Android.Protocol
 {
-
-
     public static class DriverCommandSerializer
     {
         //---------------------------------------------------------------------
         // Constantes
         //---------------------------------------------------------------------
 
-        public const int PacketSize = DriverProtocol.PacketSize;
+        public const int PacketSize =
+            DriverProtocol.PacketSize;
+
         //=====================================================================
         // Serialización
         //=====================================================================
@@ -27,18 +30,23 @@ namespace MarioKart.Android.Protocol
             DriverCommand command,
             byte[] buffer)
         {
+            if (command == null)
+            {
+                return false;
+            }
+
             if (buffer == null)
             {
                 return false;
             }
 
-            if (buffer.Length < DriverProtocol.PacketSize)
+            if (buffer.Length < PacketSize)
             {
                 return false;
             }
 
             //-------------------------------------------------------------
-            // Cabecera
+            // Encabezado
             //-------------------------------------------------------------
 
             buffer[DriverProtocol.MagicByte1Index] =
@@ -71,7 +79,9 @@ namespace MarioKart.Android.Protocol
             //-------------------------------------------------------------
 
             buffer[DriverProtocol.ChecksumIndex] =
-                CalculateChecksum(buffer);
+                CalculateChecksum(
+                    buffer,
+                    DriverProtocol.ChecksumIndex);
 
             return true;
         }
@@ -81,15 +91,14 @@ namespace MarioKart.Android.Protocol
         //=====================================================================
 
         private static byte CalculateChecksum(
-            byte[] packet)
+            byte[] buffer,
+            int length)
         {
             byte checksum = 0;
 
-            for (int i = 0;
-                 i < DriverProtocol.ChecksumIndex;
-                 ++i)
+            for (int i = 0; i < length; ++i)
             {
-                checksum ^= packet[i];
+                checksum ^= buffer[i];
             }
 
             return checksum;

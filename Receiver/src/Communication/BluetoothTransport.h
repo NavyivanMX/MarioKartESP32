@@ -1,28 +1,28 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : ESPNowReceiver.h
+ * Archivo  : BluetoothTransport.h
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Receptor ESP-NOW de DriverCommand.
+ * Transporte Bluetooth Classic para la recepción y transmisión
+ * de DriverCommand.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_ESPNOW_RECEIVER_H
-#define MK_RECEIVER_ESPNOW_RECEIVER_H
+#ifndef MK_RECEIVER_BLUETOOTH_TRANSPORT_H
+#define MK_RECEIVER_BLUETOOTH_TRANSPORT_H
 
 //=============================================================================
 // Includes
 //=============================================================================
 
-#include <WiFi.h>
-#include <esp_now.h>
+#include <BluetoothSerial.h>
 
 #include <MKShared.h>
 
 namespace MK
 {
 
-class ESPNowReceiver final
+class BluetoothTransport final
 {
 public:
 
@@ -31,7 +31,15 @@ public:
     //=========================================================================
 
     [[nodiscard]]
-    bool Begin();
+    bool Initialize(
+        const char* deviceName);
+
+    //=========================================================================
+    // Estado
+    //=========================================================================
+
+    [[nodiscard]]
+    bool IsConnected();
 
     //=========================================================================
     // Comunicación
@@ -41,29 +49,19 @@ public:
     bool Receive(
         Protocol::DriverCommand& command);
 
-private:
-
-    //=========================================================================
-    // Callback ESP-NOW
-    //=========================================================================
-
-    static void OnReceive(
-        const esp_now_recv_info* info,
-        const std::uint8_t* data,
-        int length);
+    [[nodiscard]]
+    bool Send(
+        const Protocol::DriverCommand& command);
 
 private:
 
     //=========================================================================
-    // Buffer recibido
+    // Bluetooth Classic
     //=========================================================================
 
-    static volatile bool m_packetAvailable;
-
-    static std::uint8_t m_packet[
-        Protocol::DriverCommandSerializer::PacketSize];
+    BluetoothSerial m_serial;
 };
 
-}
+} // namespace MK
 
-#endif
+#endif // MK_RECEIVER_BLUETOOTH_TRANSPORT_H
