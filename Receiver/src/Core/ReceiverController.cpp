@@ -44,7 +44,7 @@ bool ReceiverController::Begin() noexcept
     // Bluetooth
     //-------------------------------------------------------------
 
-    if (!m_bluetooth.Initialize(
+    if (!m_bluetoothManager.Begin(
             Config::BluetoothConfig::DeviceName))
     {
         m_logger.LogError(
@@ -101,7 +101,7 @@ void ReceiverController::Update() noexcept
     // Bluetooth
     //-------------------------------------------------------------
 
-    if (m_bluetooth.Receive(command))
+    if (m_bluetoothManager.Receive(command))
     {
         ProcessCommand(command);
         return;
@@ -157,6 +157,21 @@ void ReceiverController::ProcessCommand(
     m_vehicle.Update(
         command,
         m_profileManager.Current());
-}
 
+    if (m_profileManager.ProfileChanged())
+    {
+        SendVehicleStatus();
+
+        m_profileManager.ClearProfileChanged();
+    }        
+}
+    void ReceiverController::SendVehicleStatus()
+    {
+        Protocol::VehicleStatus status;
+
+        status.drivingProfile =
+            m_profileManager.CurrentId();
+
+        m_bluetoothManager.Send(status);
+    }
 } // namespace MK

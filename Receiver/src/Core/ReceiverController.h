@@ -12,7 +12,7 @@
 
 #include <cstdint>
 
-#include "src/Communication/BluetoothTransport.h"
+#include "src/Communication/BluetoothManager.h"
 #include "src/Communication/ESPNowReceiver.h"
 
 #include "src/Debug/ConsoleLogger.h"
@@ -55,6 +55,7 @@ private:
 
 private:
 
+    void SendVehicleStatus();
     //=========================================================================
     // Debug
     //=========================================================================
@@ -65,7 +66,8 @@ private:
     // Comunicación
     //=========================================================================
 
-    BluetoothTransport m_bluetooth;
+    
+    BluetoothManager m_bluetoothManager;
 
     ESPNowReceiver m_receiver;
 

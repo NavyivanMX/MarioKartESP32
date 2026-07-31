@@ -71,6 +71,7 @@
     <Compile Include="Communication\Bluettoth\BluetoothTransport.cs" />
     <Compile Include="Communication\Bluettoth\BluetoothDeviceInfo.cs" />
     <Compile Include="Communication\Bluettoth\BluetoothManager.cs" />
+    <Compile Include="Communication\Bluettoth\VehicleStatusSerializer.cs" />
     <Compile Include="Communication\CommunicationManager.cs" />
     <Compile Include="Communication\DebugTransport.cs" />
     <Compile Include="Communication\DriverCommandSender.cs" />
@@ -88,6 +89,7 @@
     <Compile Include="Debug\ConsoleLogger.cs" />
     <Compile Include="MainActivity.cs" />
     <Compile Include="Models\DrivingState.cs" />
+    <Compile Include="Models\VehicleStatus.cs" />
     <Compile Include="Shared\Direction.cs" />
     <Compile Include="Shared\DriveMode.cs" />
     <Compile Include="Shared\DriverCommand.cs" />

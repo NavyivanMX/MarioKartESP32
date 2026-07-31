@@ -1,26 +1,32 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : BluetoothTransport.h
+ * Archivo  : BluetoothManager.h
+ * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Transporte Bluetooth.
- * Únicamente envía y recibe bytes.
+ * Gestiona el protocolo de comunicación Bluetooth.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_BLUETOOTHTRANSPORT_H
-#define MK_RECEIVER_BLUETOOTHTRANSPORT_H
+#ifndef MK_RECEIVER_BLUETOOTHMANAGER_H
+#define MK_RECEIVER_BLUETOOTHMANAGER_H
 
 //=============================================================================
 // Includes
 //=============================================================================
 
-#include <cstddef>
-#include <cstdint>
+#include <MKShared.h>
+
+#include "BluetoothTransport.h"
+
+#include "Protocol/Packet.h"
+#include "Protocol/PacketType.h"
+
+#include "Protocol/VehicleStatus.h"
 
 namespace MK
 {
 
-class BluetoothTransport final
+class BluetoothManager final
 {
 public:
 
@@ -40,24 +46,25 @@ public:
     bool Connected() const noexcept;
 
     //=========================================================================
-    // Recepción
+    // DriverCommand
     //=========================================================================
 
     [[nodiscard]]
-    std::size_t Receive(
-        std::uint8_t* buffer,
-        std::size_t length) noexcept;
+    bool Receive(
+        Protocol::DriverCommand& command) noexcept;
 
     //=========================================================================
-    // Envío
+    // VehicleStatus
     //=========================================================================
 
-    [[nodiscard]]
     bool Send(
-        const std::uint8_t* data,
-        std::size_t length) noexcept;
+        const Protocol::VehicleStatus& status) noexcept;
+
+private:
+
+    BluetoothTransport m_transport;
 };
 
-} // namespace MK
+}
 
 #endif

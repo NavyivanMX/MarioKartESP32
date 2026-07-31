@@ -1,122 +1,65 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : BluetoothTransport.cpp
- * Autor    : Narciso Ivan Cisneros Acosta
- *
- * Descripción:
- * Implementación del transporte Bluetooth Classic.
  ******************************************************************************/
 
 #include "BluetoothTransport.h"
 
+#include <BluetoothSerial.h>
+
 namespace MK
 {
 
-//=============================================================================
-// Inicialización
-//=============================================================================
-
-bool BluetoothTransport::Initialize(
-    const char* deviceName)
+namespace
 {
-    if (deviceName == nullptr)
-    {
-        return false;
-    }
-
-    return m_serial.begin(deviceName);
+BluetoothSerial g_serial;
 }
 
 //=============================================================================
-// Estado
-//=============================================================================
 
-bool BluetoothTransport::IsConnected()
+bool BluetoothTransport::Begin(
+    const char* deviceName) noexcept
 {
-    return m_serial.hasClient();
+    return g_serial.begin(deviceName);
 }
 
 //=============================================================================
-// Recepción
-//=============================================================================
 
-bool BluetoothTransport::Receive(
-    Protocol::DriverCommand& command)
+bool BluetoothTransport::Connected() const noexcept
 {
-    //-------------------------------------------------------------
-    // Cliente conectado
-    //-------------------------------------------------------------
-
-    if (!IsConnected())
-    {
-        return false;
-    }
-
-    //-------------------------------------------------------------
-    // Debe existir un paquete completo
-    //-------------------------------------------------------------
-
-    constexpr std::size_t PacketSize =
-        Protocol::DriverCommandSerializer::PacketSize;
-
-    if (m_serial.available() < PacketSize)
-    {
-        return false;
-    }
-
-    //-------------------------------------------------------------
-    // Leer paquete
-    //-------------------------------------------------------------
-
-    std::uint8_t packet[PacketSize];
-
-    std::size_t bytesRead =
-        m_serial.readBytes(
-            reinterpret_cast<char*>(packet),
-            PacketSize);
-
-    if (bytesRead != PacketSize)
-    {
-        return false;
-    }
-
-    //-------------------------------------------------------------
-    // Deserializar
-    //-------------------------------------------------------------
-
-    return Protocol::DriverCommandSerializer::
-        Deserialize(
-            packet,
-            command);
+    return g_serial.hasClient();
 }
 
 //=============================================================================
-// Envío
+
+std::size_t BluetoothTransport::Receive(
+    std::uint8_t* buffer,
+    std::size_t length) noexcept
+{
+    if (!Connected())
+    {
+        return 0;
+    }
+
+    return g_serial.readBytes(
+        reinterpret_cast<char*>(buffer),
+        length);
+}
+
 //=============================================================================
 
 bool BluetoothTransport::Send(
-    const Protocol::DriverCommand& command)
+    const std::uint8_t* data,
+    std::size_t length) noexcept
 {
-    if (!IsConnected())
+    if (!Connected())
     {
         return false;
     }
 
-    std::uint8_t packet[
-        Protocol::DriverCommandSerializer::PacketSize];
-
-    if (!Protocol::DriverCommandSerializer::
-            Serialize(
-                command,
-                packet))
-    {
-        return false;
-    }
-
-    return m_serial.write(
-               packet,
-               sizeof(packet))
-           == sizeof(packet);
+    return g_serial.write(
+               data,
+               length) == length;
 }
 
 } // namespace MK
