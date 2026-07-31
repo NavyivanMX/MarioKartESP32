@@ -26,6 +26,8 @@ bool ReceiverController::Begin() noexcept
 
     m_logger.Begin();
 
+    m_logger.LogBoot();
+
     //-------------------------------------------------------------
     // Vehículo
     //-------------------------------------------------------------
@@ -64,13 +66,19 @@ bool ReceiverController::Begin() noexcept
     }
 
     //-------------------------------------------------------------
-    // Ahora ya existe la interfaz WiFi
+    // Driving Profiles
     //-------------------------------------------------------------
 
-    m_logger.LogBoot();
+    if (!m_profileManager.Begin())
+    {
+        m_logger.LogError(
+            "DrivingProfileManager initialization failed.");
 
-    m_logger.LogBluetooth(
-        Config::BluetoothConfig::DeviceName);
+        return false;
+    }
+
+    m_logger.LogProfile(
+        m_profileManager.Current());
 
     //-------------------------------------------------------------
     // Sistema listo
@@ -87,18 +95,15 @@ bool ReceiverController::Begin() noexcept
 
 void ReceiverController::Update() noexcept
 {
-    //-------------------------------------------------------------
-    // Bluetooth tiene prioridad
-    //-------------------------------------------------------------
-
     Protocol::DriverCommand command;
+
+    //-------------------------------------------------------------
+    // Bluetooth
+    //-------------------------------------------------------------
 
     if (m_bluetooth.Receive(command))
     {
-        m_logger.Log(command);
-
-        m_vehicle.Update(command);
-
+        ProcessCommand(command);
         return;
     }
 
@@ -108,10 +113,50 @@ void ReceiverController::Update() noexcept
 
     if (m_receiver.Receive(command))
     {
-        m_logger.Log(command);
-
-        m_vehicle.Update(command);
+        ProcessCommand(command);
     }
+}
+
+//=============================================================================
+// Procesamiento
+//=============================================================================
+
+void ReceiverController::ProcessCommand(
+    const Protocol::DriverCommand& command) noexcept
+{
+    //-------------------------------------------------------------
+    // Cambio de perfil (flanco)
+    //-------------------------------------------------------------
+
+    const bool gravityPressed =
+        command.driveMode ==
+        Types::Vehicle::DriveMode::Gravity;
+
+    if (gravityPressed &&
+        !m_gravityPressedLastFrame)
+    {
+        m_profileManager.Next();
+
+        m_logger.LogProfile(
+            m_profileManager.Current());
+    }
+
+    m_gravityPressedLastFrame =
+        gravityPressed;
+
+    //-------------------------------------------------------------
+    // Debug
+    //-------------------------------------------------------------
+
+    m_logger.Log(command);
+
+    //-------------------------------------------------------------
+    // Vehículo
+    //-------------------------------------------------------------
+
+    m_vehicle.Update(
+        command,
+        m_profileManager.Current());
 }
 
 } // namespace MK

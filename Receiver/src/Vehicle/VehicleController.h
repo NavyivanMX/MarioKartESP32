@@ -12,10 +12,16 @@
 #ifndef MK_RECEIVER_VEHICLECONTROLLER_H
 #define MK_RECEIVER_VEHICLECONTROLLER_H
 
+//=============================================================================
+// Includes
+//=============================================================================
+
 #include <MKShared.h>
 
 #include "src/Vehicle/GravityController.h"
 #include "src/Vehicle/MotionController.h"
+
+#include "src/Vehicle/VehicleProfiles/DrivingProfile.h"
 
 namespace MK
 {
@@ -36,7 +42,8 @@ public:
     //=========================================================================
 
     void Update(
-        const Protocol::DriverCommand& command) noexcept;
+        const Protocol::DriverCommand& command,
+        const VehicleProfiles::DrivingProfile& profile) noexcept;
 
 private:
 
@@ -48,6 +55,7 @@ private:
 
     GravityController m_gravity;
 };
+
 } // namespace MK
 
 #endif // MK_RECEIVER_VEHICLECONTROLLER_H

@@ -28,38 +28,48 @@ bool MotorController::Begin() noexcept
 //=============================================================================
 
 void MotorController::Drive(
-    const Protocol::DriverCommand& command) noexcept
+    const Protocol::DriverCommand& command,
+    const VehicleProfiles::DrivingProfile& profile) noexcept
 {
     using Types::Vehicle::Direction;
     using Types::Vehicle::Steering;
     using Types::Vehicle::Turbo;
 
     //---------------------------------------------------------------------
-    // Potencia base
+    // Potencias según el perfil seleccionado
     //---------------------------------------------------------------------
 
-    const std::uint8_t cruisePower =
-        (command.turbo == Turbo::Enabled)
-            ? MotorConfig::Power::Turbo
-            : MotorConfig::Power::Cruise;
+    const std::uint8_t forwardPower =
+        (command.turbo == Turbo::Enabled &&
+         profile.turboEnabled)
+            ? profile.turboSpeed
+            : profile.forwardSpeed;
 
-    const std::uint8_t turnPower =
+    const std::uint8_t forwardTurnPower =
         static_cast<std::uint8_t>(
-            cruisePower *
-            MotorConfig::Steering::TurnRatio);
+            forwardPower *
+            profile.steeringFactor);
+
+    const std::uint8_t reversePower =
+        profile.reverseSpeed;
+
+    const std::uint8_t reverseTurnPower =
+        static_cast<std::uint8_t>(
+            reversePower *
+            profile.steeringFactor);
 
     //---------------------------------------------------------------------
     // Estado inicial
     //---------------------------------------------------------------------
 
-    MotorState left;
-    MotorState right;
+    MotorState left{};
+    MotorState right{};
 
     left.direction = Direction::Stop;
     right.direction = Direction::Stop;
 
-    left.power = MotorConfig::Power::Stop;
-    right.power = MotorConfig::Power::Stop;
+    left.power = 0;
+    right.power = 0;
 
     //---------------------------------------------------------------------
     // Movimiento
@@ -67,9 +77,9 @@ void MotorController::Drive(
 
     switch (command.direction)
     {
-        //-----------------------------------------------------------------
-        // Vehículo detenido
-        //-----------------------------------------------------------------
+        //-------------------------------------------------------------
+        // Stop
+        //-------------------------------------------------------------
 
         case Direction::Stop:
 
@@ -78,10 +88,6 @@ void MotorController::Drive(
                 case Steering::Straight:
                     break;
 
-                //---------------------------------------------------------
-                // Giro tipo tanque
-                //---------------------------------------------------------
-
                 case Steering::Left:
 
                     if (MotorConfig::Steering::PivotTurnEnabled)
@@ -89,8 +95,8 @@ void MotorController::Drive(
                         left.direction = Direction::Reverse;
                         right.direction = Direction::Forward;
 
-                        left.power = cruisePower;
-                        right.power = cruisePower;
+                        left.power = forwardPower;
+                        right.power = forwardPower;
                     }
 
                     break;
@@ -102,8 +108,8 @@ void MotorController::Drive(
                         left.direction = Direction::Forward;
                         right.direction = Direction::Reverse;
 
-                        left.power = cruisePower;
-                        right.power = cruisePower;
+                        left.power = forwardPower;
+                        right.power = forwardPower;
                     }
 
                     break;
@@ -111,9 +117,9 @@ void MotorController::Drive(
 
             break;
 
-        //-----------------------------------------------------------------
-        // Avance
-        //-----------------------------------------------------------------
+        //-------------------------------------------------------------
+        // Forward
+        //-------------------------------------------------------------
 
         case Direction::Forward:
 
@@ -124,8 +130,8 @@ void MotorController::Drive(
                     left.direction = Direction::Forward;
                     right.direction = Direction::Forward;
 
-                    left.power = cruisePower;
-                    right.power = cruisePower;
+                    left.power = forwardPower;
+                    right.power = forwardPower;
 
                     break;
 
@@ -134,8 +140,8 @@ void MotorController::Drive(
                     left.direction = Direction::Forward;
                     right.direction = Direction::Forward;
 
-                    left.power = turnPower;
-                    right.power = cruisePower;
+                    left.power = forwardTurnPower;
+                    right.power = forwardPower;
 
                     break;
 
@@ -144,17 +150,17 @@ void MotorController::Drive(
                     left.direction = Direction::Forward;
                     right.direction = Direction::Forward;
 
-                    left.power = cruisePower;
-                    right.power = turnPower;
+                    left.power = forwardPower;
+                    right.power = forwardTurnPower;
 
                     break;
             }
 
             break;
 
-        //-----------------------------------------------------------------
-        // Reversa
-        //-----------------------------------------------------------------
+        //-------------------------------------------------------------
+        // Reverse
+        //-------------------------------------------------------------
 
         case Direction::Reverse:
 
@@ -165,8 +171,8 @@ void MotorController::Drive(
                     left.direction = Direction::Reverse;
                     right.direction = Direction::Reverse;
 
-                    left.power = cruisePower;
-                    right.power = cruisePower;
+                    left.power = reversePower;
+                    right.power = reversePower;
 
                     break;
 
@@ -175,8 +181,8 @@ void MotorController::Drive(
                     left.direction = Direction::Reverse;
                     right.direction = Direction::Reverse;
 
-                    left.power = turnPower;
-                    right.power = cruisePower;
+                    left.power = reverseTurnPower;
+                    right.power = reversePower;
 
                     break;
 
@@ -185,8 +191,8 @@ void MotorController::Drive(
                     left.direction = Direction::Reverse;
                     right.direction = Direction::Reverse;
 
-                    left.power = cruisePower;
-                    right.power = turnPower;
+                    left.power = reversePower;
+                    right.power = reverseTurnPower;
 
                     break;
             }

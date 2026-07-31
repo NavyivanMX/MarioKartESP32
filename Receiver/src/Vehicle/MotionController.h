@@ -1,11 +1,6 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : MotionController.h
- * Autor    : Narciso Ivan Cisneros Acosta
- *
- * Descripción:
- * Controlador del movimiento del vehículo.
- * Delega el procesamiento del DriverCommand al MotorController.
  ******************************************************************************/
 
 #ifndef MK_RECEIVER_MOTIONCONTROLLER_H
@@ -14,6 +9,7 @@
 #include <MKShared.h>
 
 #include "src/Vehicle/MotorController.h"
+#include "src/Vehicle/VehicleProfiles/DrivingProfile.h"
 
 namespace MK
 {
@@ -22,31 +18,18 @@ class MotionController final
 {
 public:
 
-    //=========================================================================
-    // Ciclo de vida
-    //=========================================================================
-
-    /// Inicializa el subsistema de movimiento.
     [[nodiscard]]
     bool Begin() noexcept;
 
-    //=========================================================================
-    // Movimiento
-    //=========================================================================
-
-    /// Actualiza el movimiento del vehículo.
     void Update(
-        const Protocol::DriverCommand& command) noexcept;
+        const Protocol::DriverCommand& command,
+        const VehicleProfiles::DrivingProfile& profile) noexcept;
 
 private:
-
-    //=========================================================================
-    // Subsistemas
-    //=========================================================================
 
     MotorController m_motor;
 };
 
-} // namespace MK
+}
 
 #endif // MK_RECEIVER_MOTIONCONTROLLER_H

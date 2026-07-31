@@ -7,7 +7,7 @@
  * Implementación del orquestador principal del vehículo.
  ******************************************************************************/
 
-#include "src/Vehicle/VehicleController.h"
+#include "VehicleController.h"
 
 namespace MK
 {
@@ -32,23 +32,27 @@ bool VehicleController::Begin() noexcept
 }
 
 //=============================================================================
-// Actualización
+// Control
 //=============================================================================
 
 void VehicleController::Update(
-    const Protocol::DriverCommand& command) noexcept
+    const Protocol::DriverCommand& command,
+    const VehicleProfiles::DrivingProfile& profile) noexcept
 {
-    //----------------------------------------------------------
+    //---------------------------------------------------------------------
     // Movimiento
-    //----------------------------------------------------------
+    //---------------------------------------------------------------------
 
-    m_motion.Update(command);
+    m_motion.Update(
+        command,
+        profile);
 
-    //----------------------------------------------------------
-    // Modo Gravity
-    //----------------------------------------------------------
+    //---------------------------------------------------------------------
+    // Gravity
+    //---------------------------------------------------------------------
 
-    m_gravity.Update(command.driveMode);
+    m_gravity.Update(
+        command.driveMode);
 }
 
 } // namespace MK

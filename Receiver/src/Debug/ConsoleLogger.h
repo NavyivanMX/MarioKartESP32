@@ -11,7 +11,13 @@
 #ifndef MK_RECEIVER_CONSOLELOGGER_H
 #define MK_RECEIVER_CONSOLELOGGER_H
 
+//=============================================================================
+// Includes
+//=============================================================================
+
 #include <MKShared.h>
+
+#include "src/Vehicle/VehicleProfiles/DrivingProfile.h"
 
 namespace MK
 {
@@ -24,50 +30,39 @@ public:
     // Ciclo de vida
     //=========================================================================
 
-    /// Inicializa la consola serie.
     void Begin() noexcept;
 
     //=========================================================================
     // Sistema
     //=========================================================================
 
-    /// Muestra la información de arranque.
     void LogBoot() const noexcept;
 
-    /// Indica que el sistema está listo.
+    void LogWiFiMac() const noexcept;
+
+    void LogBluetooth(
+        const char* deviceName) const noexcept;
+
     void LogReady() const noexcept;
 
-    /// Muestra un mensaje de error.
     void LogError(
         const char* message) const noexcept;
 
     //=========================================================================
-    // Comunicación
+    // Driving Profile
     //=========================================================================
 
-    /// Muestra la dirección MAC WiFi del ESP32.
-    void LogWiFiMac() const noexcept;
-
-    /// Muestra el nombre Bluetooth del dispositivo.
-    void LogBluetooth(
-        const char* deviceName) const noexcept;
-
-    /// Indica que un cliente Bluetooth se conectó.
-    void LogBluetoothConnected() const noexcept;
+    void LogProfile(
+        const VehicleProfiles::DrivingProfile& profile) const noexcept;
 
     //=========================================================================
     // DriverCommand
     //=========================================================================
 
-    /// Muestra el DriverCommand recibido.
     void Log(
         const Protocol::DriverCommand& command) const noexcept;
 
 private:
-
-    //=========================================================================
-    // Conversión de enums
-    //=========================================================================
 
     [[nodiscard]]
     static const char* ToString(
@@ -88,4 +83,4 @@ private:
 
 } // namespace MK
 
-#endif // MK_RECEIVER_CONSOLELOGGER_H
+#endif

@@ -1,34 +1,26 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : MotorController.h
+ * Archivo  : DrivingProfileManager.h
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Controlador del sistema de propulsión.
- *
- * Interpreta el DriverCommand recibido y calcula el estado individual
- * de cada motor (dirección y potencia), delegando la aplicación física
- * al MotorDriver.
+ * Administra el perfil de conducción actualmente seleccionado.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_MOTORCONTROLLER_H
-#define MK_RECEIVER_MOTORCONTROLLER_H
+#ifndef MK_RECEIVER_DRIVINGPROFILEMANAGER_H
+#define MK_RECEIVER_DRIVINGPROFILEMANAGER_H
 
 //=============================================================================
 // Includes
 //=============================================================================
 
-#include <MKShared.h>
+#include "DrivingProfiles.h"
+#include "DrivingProfileStorage.h"
 
-#include "src/Drivers/MotorDriver.h"
-#include "src/Vehicle/MotorState.h"
-
-#include "src/Vehicle/VehicleProfiles/DrivingProfile.h"
-
-namespace MK
+namespace MK::VehicleProfiles
 {
 
-class MotorController final
+class DrivingProfileManager final
 {
 public:
 
@@ -40,32 +32,51 @@ public:
     bool Begin() noexcept;
 
     //=========================================================================
-    // Movimiento
+    // Perfil actual
     //=========================================================================
 
-    void Drive(
-        const Protocol::DriverCommand& command,
-        const VehicleProfiles::DrivingProfile& profile) noexcept;
+    [[nodiscard]]
+    const DrivingProfile&
+    Current() const noexcept;
+
+    [[nodiscard]]
+    DrivingProfileId
+    CurrentId() const noexcept;
+
+    [[nodiscard]]
+    const char*
+    CurrentName() const noexcept;
+
+    //=========================================================================
+    // Navegación
+    //=========================================================================
+
+    void Next() noexcept;
+
+    void Previous() noexcept;
+
+    void Set(
+        DrivingProfileId profile) noexcept;
+
+    //=========================================================================
+    // Notificación
+    //=========================================================================
+
+    [[nodiscard]]
+    bool ProfileChanged() const noexcept;
+
+    void ClearProfileChanged() noexcept;
 
 private:
 
-    //=========================================================================
-    // Hardware
-    //=========================================================================
+    DrivingProfileStorage m_storage;
 
-    void Apply(
-        const MotorState& left,
-        const MotorState& right) noexcept;
+    DrivingProfileId m_currentId{
+        DrivingProfileId::Normal};
 
-private:
-
-    //=========================================================================
-    // Drivers
-    //=========================================================================
-
-    MotorDriver m_driver;
+    bool m_profileChanged{false};
 };
 
-} // namespace MK
+}
 
-#endif // MK_RECEIVER_MOTORCONTROLLER_H
+#endif

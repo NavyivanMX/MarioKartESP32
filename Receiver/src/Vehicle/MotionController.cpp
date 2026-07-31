@@ -12,23 +12,18 @@
 namespace MK
 {
 
-//=============================================================================
-// Ciclo de vida
-//=============================================================================
-
 bool MotionController::Begin() noexcept
 {
     return m_motor.Begin();
 }
 
-//=============================================================================
-// Movimiento
-//=============================================================================
-
 void MotionController::Update(
-    const Protocol::DriverCommand& command) noexcept
-{   
-    m_motor.Drive(command);
+    const Protocol::DriverCommand& command,
+    const VehicleProfiles::DrivingProfile& profile) noexcept
+{
+    m_motor.Drive(
+        command,
+        profile);
 }
 
-} // namespace MK
+}

@@ -1,15 +1,10 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : ReceiverController.h
- * Autor    : Narciso Ivan Cisneros Acosta
- *
- * Descripción:
- * Orquestador principal del firmware Receiver.
- * Coordina todos los medios de comunicación y el control del vehículo.
  ******************************************************************************/
 
 #ifndef MK_RECEIVER_CONTROLLER_H
-#define MK_RECEIVER_CONTROLLER_H 
+#define MK_RECEIVER_CONTROLLER_H
 
 //=============================================================================
 // Includes
@@ -26,6 +21,8 @@
 #include <Protocol/DriverCommandSerializer.h>
 
 #include "src/Vehicle/VehicleController.h"
+
+#include "src/Vehicle/VehicleProfiles/DrivingProfileManager.h"
 
 namespace MK
 {
@@ -53,10 +50,8 @@ private:
     // Procesamiento
     //=========================================================================
 
-    /// Procesa un paquete recibido desde cualquier transporte.
-    void ProcessPacket(
-        const std::uint8_t* packet,
-        std::size_t length) noexcept;
+    void ProcessCommand(
+        const Protocol::DriverCommand& command) noexcept;
 
 private:
 
@@ -70,10 +65,8 @@ private:
     // Comunicación
     //=========================================================================
 
-    /// Transporte Bluetooth Classic.
     BluetoothTransport m_bluetooth;
 
-    /// Transporte ESP-NOW.
     ESPNowReceiver m_receiver;
 
     //=========================================================================
@@ -83,6 +76,19 @@ private:
     VehicleController m_vehicle;
 
     //=========================================================================
+    // Driving Profiles
+    //=========================================================================
+
+    VehicleProfiles::DrivingProfileManager
+        m_profileManager;
+
+    //=========================================================================
+    // Estado
+    //=========================================================================
+
+    bool m_gravityPressedLastFrame{false};
+
+    //=========================================================================
     // Buffers
     //=========================================================================
 
@@ -90,6 +96,6 @@ private:
         Protocol::DriverCommandSerializer::PacketSize];
 };
 
-} // namespace MK
+}
 
-#endif // MK_RECEIVER_CONTROLLER_H
+#endif

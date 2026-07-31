@@ -1,10 +1,6 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : ConsoleLogger.cpp
- * Autor    : Narciso Ivan Cisneros Acosta
- *
- * Descripción:
- * Implementación del logger de consola.
  ******************************************************************************/
 
 #include "src/Debug/ConsoleLogger.h"
@@ -35,6 +31,7 @@ void ConsoleLogger::Begin() noexcept
 void ConsoleLogger::LogBoot() const noexcept
 {
     Serial.println();
+
     Serial.println(F("========================================"));
     Serial.println(F("MarioKart ESP32 RC"));
     Serial.println(F("Receiver"));
@@ -43,15 +40,26 @@ void ConsoleLogger::LogBoot() const noexcept
     Serial.println(F("Author  : Narciso Ivan Cisneros Acosta"));
     Serial.println(F("========================================"));
     Serial.println();
-
-    //---------------------------------------------------------------------
-    // Información del sistema
-    //---------------------------------------------------------------------
-
-    LogWiFiMac();
-
-    Serial.println();
 }
+
+//-----------------------------------------------------------------------------
+
+void ConsoleLogger::LogWiFiMac() const noexcept
+{
+    Serial.print(F("WiFi MAC   : "));
+    Serial.println(WiFi.macAddress());
+}
+
+//-----------------------------------------------------------------------------
+
+void ConsoleLogger::LogBluetooth(
+    const char* deviceName) const noexcept
+{
+    Serial.print(F("Bluetooth  : "));
+    Serial.println(deviceName);
+}
+
+//-----------------------------------------------------------------------------
 
 void ConsoleLogger::LogReady() const noexcept
 {
@@ -59,6 +67,8 @@ void ConsoleLogger::LogReady() const noexcept
     Serial.println(F("System Ready"));
     Serial.println(F("----------------------------------------"));
 }
+
+//-----------------------------------------------------------------------------
 
 void ConsoleLogger::LogError(
     const char* message) const noexcept
@@ -68,25 +78,44 @@ void ConsoleLogger::LogError(
 }
 
 //=============================================================================
-// Comunicación
+// Driving Profile
 //=============================================================================
 
-void ConsoleLogger::LogWiFiMac() const noexcept
+void ConsoleLogger::LogProfile(
+    const VehicleProfiles::DrivingProfile& profile) const noexcept
 {
-    Serial.print(F("WiFi MAC   : "));
-    Serial.println(WiFi.macAddress());
-}
+    Serial.println();
 
-void ConsoleLogger::LogBluetooth(
-    const char* deviceName) const noexcept
-{
-    Serial.print(F("Bluetooth  : "));
-    Serial.println(deviceName);
-}
+    Serial.println(F("========== Driving Profile =========="));
 
-void ConsoleLogger::LogBluetoothConnected() const noexcept
-{
-    Serial.println(F("[Bluetooth] Client connected."));
+    Serial.print(F("Name             : "));
+    Serial.println(profile.name);
+
+    Serial.print(F("Forward Speed    : "));
+    Serial.println(profile.forwardSpeed);
+
+    Serial.print(F("Reverse Speed    : "));
+    Serial.println(profile.reverseSpeed);
+
+    Serial.print(F("Turbo Speed      : "));
+    Serial.println(profile.turboSpeed);
+
+    Serial.print(F("Steering Factor  : "));
+    Serial.println(profile.steeringFactor, 2);
+
+    Serial.print(F("Turbo Enabled    : "));
+    Serial.println(
+        profile.turboEnabled
+            ? F("Yes")
+            : F("No"));
+
+    Serial.print(F("Gravity Enabled  : "));
+    Serial.println(
+        profile.gravityEnabled
+            ? F("Yes")
+            : F("No"));
+
+    Serial.println(F("====================================="));
 }
 
 //=============================================================================
@@ -137,6 +166,8 @@ const char* ConsoleLogger::ToString(
     return "Unknown";
 }
 
+//-----------------------------------------------------------------------------
+
 const char* ConsoleLogger::ToString(
     Types::Vehicle::Steering steering) noexcept
 {
@@ -155,6 +186,8 @@ const char* ConsoleLogger::ToString(
     return "Unknown";
 }
 
+//-----------------------------------------------------------------------------
+
 const char* ConsoleLogger::ToString(
     Types::Vehicle::Turbo turbo) noexcept
 {
@@ -169,6 +202,8 @@ const char* ConsoleLogger::ToString(
 
     return "Unknown";
 }
+
+//-----------------------------------------------------------------------------
 
 const char* ConsoleLogger::ToString(
     Types::Vehicle::DriveMode mode) noexcept
