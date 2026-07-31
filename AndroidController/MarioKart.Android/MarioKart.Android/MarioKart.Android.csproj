@@ -76,6 +76,11 @@
     <Compile Include="Communication\DebugTransport.cs" />
     <Compile Include="Communication\DriverCommandSender.cs" />
     <Compile Include="Communication\ICommunicationTransport.cs" />
+    <Compile Include="Communication\Protocol\Packet.cs" />
+    <Compile Include="Communication\Protocol\PacketSerializer.cs" />
+    <Compile Include="Communication\Protocol\PacketType.cs" />
+    <Compile Include="Communication\Protocol\VehicleStatus.cs" />
+    <Compile Include="Communication\Protocol\VehicleStatusSerializer.cs" />
     <Compile Include="Controllers\DrivingController.cs" />
     <Compile Include="Controls\FloatingButton.cs" />
     <Compile Include="Controls\FloatingButtonAnimator.cs" />
