@@ -18,7 +18,6 @@
 #include "src/Debug/ConsoleLogger.h"
 
 #include <Protocol/Protocol.h>
-#include <Protocol/DriverCommandSerializer.h>
 
 #include "src/Vehicle/VehicleController.h"
 
@@ -94,8 +93,6 @@ private:
     // Buffers
     //=========================================================================
 
-    std::uint8_t m_packet[
-        Protocol::DriverCommandSerializer::PacketSize];
 };
 
 }

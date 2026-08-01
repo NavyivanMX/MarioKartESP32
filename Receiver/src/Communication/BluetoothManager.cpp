@@ -1,11 +1,13 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : BluetoothManager.cpp
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Implementación del administrador del protocolo Bluetooth.
  ******************************************************************************/
 
 #include "BluetoothManager.h"
-
-#include "Protocol/VehicleStatusSerializer.h"
 
 namespace MK
 {
@@ -17,9 +19,12 @@ namespace MK
 bool BluetoothManager::Begin(
     const char* deviceName) noexcept
 {
-    return m_transport.Begin(deviceName);
+    return m_transport.Begin(
+        deviceName);
 }
 
+//=============================================================================
+// Estado
 //=============================================================================
 
 bool BluetoothManager::Connected() const noexcept
@@ -28,52 +33,93 @@ bool BluetoothManager::Connected() const noexcept
 }
 
 //=============================================================================
-// Recepción
+// DriverCommand
 //=============================================================================
 
 bool BluetoothManager::Receive(
     Protocol::DriverCommand& command) noexcept
 {
-    (void)command;
+    std::uint8_t buffer[
+        Protocol::PacketSize<
+            Protocol::DriverCommand>()];
 
-    //---------------------------------------------------------------------
-    // Pendiente:
-    // Leer PacketHeader
-    // Validar PacketType
-    // Deserializar DriverCommand
-    //---------------------------------------------------------------------
+    const std::size_t received =
+        m_transport.Receive(
+            buffer,
+            sizeof(buffer));
 
-    return false;
+    if (received != sizeof(buffer))
+    {
+        return false;
+    }
+
+    Protocol::Packet<
+        Protocol::DriverCommand> packet;
+
+    if (!Protocol::PacketSerializer::Deserialize(
+            buffer,
+            received,
+            packet))
+    {
+        return false;
+    }
+
+    if (packet.header.type !=
+        Protocol::PacketType::DriverCommand)
+    {
+        return false;
+    }
+
+    command = packet.payload;
+
+    return true;
 }
 
 //=============================================================================
-// Envío
+// VehicleStatus
 //=============================================================================
 
 bool BluetoothManager::Send(
     const Protocol::VehicleStatus& status) noexcept
 {
-    std::uint8_t payload[
-        sizeof(Protocol::VehicleStatus)];
+    //-------------------------------------------------------------
+    // Construir Packet
+    //-------------------------------------------------------------
 
-    if (!Protocol::SerializeVehicleStatus(
-            status,
-            payload,
-            sizeof(payload)))
+    Protocol::Packet<
+        Protocol::VehicleStatus> packet;
+
+    packet.header.type =
+        Protocol::PacketType::VehicleStatus;
+
+    packet.header.payloadSize =
+        sizeof(Protocol::VehicleStatus);
+
+    packet.payload = status;
+
+    //-------------------------------------------------------------
+    // Serializar
+    //-------------------------------------------------------------
+
+    std::uint8_t buffer[
+        Protocol::PacketSize<
+            Protocol::VehicleStatus>()];
+
+    if (!Protocol::PacketSerializer::Serialize(
+            packet,
+            buffer,
+            sizeof(buffer)))
     {
         return false;
     }
 
-    //---------------------------------------------------------------------
-    // De momento enviamos únicamente el payload.
-    //
-    // En la siguiente etapa este payload será encapsulado dentro
-    // de un Packet<VehicleStatus>.
-    //---------------------------------------------------------------------
+    //-------------------------------------------------------------
+    // Enviar
+    //-------------------------------------------------------------
 
     return m_transport.Send(
-        payload,
-        sizeof(payload));
+        buffer,
+        sizeof(buffer));
 }
 
 }

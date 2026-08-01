@@ -23,7 +23,8 @@ ESPNowReceiver::m_packetAvailable = false;
 
 std::uint8_t
 ESPNowReceiver::m_packet[
-    Protocol::DriverCommandSerializer::PacketSize];
+    Protocol::PacketSize<
+        Protocol::DriverCommand>()];
 
 //=============================================================================
 // Inicialización
@@ -79,13 +80,37 @@ bool ESPNowReceiver::Receive(
     m_packetAvailable = false;
 
     //-------------------------------------------------------------
-    // Deserializar
+    // Deserializar paquete
     //-------------------------------------------------------------
 
-    return Protocol::DriverCommandSerializer::
-        Deserialize(
+    Protocol::Packet<
+        Protocol::DriverCommand> packet;
+
+    if (!Protocol::PacketSerializer::Deserialize(
             m_packet,
-            command);
+            sizeof(m_packet),
+            packet))
+    {
+        return false;
+    }
+
+    //-------------------------------------------------------------
+    // Validar tipo
+    //-------------------------------------------------------------
+
+    if (packet.header.type !=
+        Protocol::PacketType::DriverCommand)
+    {
+        return false;
+    }
+
+    //-------------------------------------------------------------
+    // Copiar payload
+    //-------------------------------------------------------------
+
+    command = packet.payload;
+
+    return true;
 }
 
 //=============================================================================
@@ -104,7 +129,8 @@ void ESPNowReceiver::OnReceive(
     //-------------------------------------------------------------
 
     constexpr std::size_t PacketSize =
-        Protocol::DriverCommandSerializer::PacketSize;
+        Protocol::PacketSize<
+            Protocol::DriverCommand>();
 
     if (length != PacketSize)
     {

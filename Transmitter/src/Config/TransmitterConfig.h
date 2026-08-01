@@ -14,7 +14,7 @@
 namespace MK::TransmitterConfig
 {
 
-inline constexpr bool InputTestMode = true;
+inline constexpr bool InputTestMode = false;
 // inline constexpr Types::MacAddress ReceiverMacAddress  =
 // {
 //     0xCC,

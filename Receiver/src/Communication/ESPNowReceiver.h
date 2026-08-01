@@ -4,15 +4,19 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Receptor ESP-NOW de DriverCommand.
+ * Receptor ESP-NOW.
+ * Recibe paquetes provenientes del Transmitter y los convierte a
+ * DriverCommand utilizando el protocolo compartido.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_ESPNOW_RECEIVER_H
-#define MK_RECEIVER_ESPNOW_RECEIVER_H
+#ifndef MK_RECEIVER_ESPNOWRECEIVER_H
+#define MK_RECEIVER_ESPNOWRECEIVER_H
 
 //=============================================================================
 // Includes
 //=============================================================================
+
+#include <cstdint>
 
 #include <WiFi.h>
 #include <esp_now.h>
@@ -34,7 +38,7 @@ public:
     bool Begin();
 
     //=========================================================================
-    // Comunicación
+    // Recepción
     //=========================================================================
 
     [[nodiscard]]
@@ -44,7 +48,7 @@ public:
 private:
 
     //=========================================================================
-    // Callback ESP-NOW
+    // Callback
     //=========================================================================
 
     static void OnReceive(
@@ -54,16 +58,13 @@ private:
 
 private:
 
-    //=========================================================================
-    // Buffer recibido
-    //=========================================================================
-
     static volatile bool m_packetAvailable;
 
     static std::uint8_t m_packet[
-        Protocol::DriverCommandSerializer::PacketSize];
+        Protocol::PacketSize<
+            Protocol::DriverCommand>()];
 };
 
-}
+} // namespace MK
 
 #endif

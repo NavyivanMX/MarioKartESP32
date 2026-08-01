@@ -101,18 +101,22 @@ namespace MK
 
 bool ESPNowHandler::Begin()
 {
+    Serial.print("Begin this = ");
+Serial.println(reinterpret_cast<uint32_t>(this), HEX);
 #if ESPNOW_DEBUG
 
     Serial.println();
     Serial.println("========== MK Protocol ==========");
 
-    Serial.print("Protocol Version : ");
+    Serial.print("Packet Type      : ");
     Serial.println(
-        Protocol::DriverCommandSerializer::Version);
+        static_cast<std::uint8_t>(
+            Protocol::PacketType::DriverCommand));
 
     Serial.print("Packet Size      : ");
     Serial.println(
-        Protocol::DriverCommandSerializer::PacketSize);
+        Protocol::PacketSize<
+            Protocol::DriverCommand>());
 
     Serial.println("=================================");
     Serial.println();
@@ -126,34 +130,44 @@ bool ESPNowHandler::Begin()
 
     if (!InitializeWiFi())
     {
-#if ESPNOW_DEBUG
-        Serial.println("[ESP-NOW] ERROR: InitializeWiFi()");
-#endif
+        #if ESPNOW_DEBUG
+                Serial.println("[ESP-NOW] ERROR: InitializeWiFi()");
+        #endif
         return false;
     }
-
+    #if ESPNOW_DEBUG
+        Serial.println("OK -> InitializeWiFi()");
+    #endif
     if (!InitializeESPNow())
     {
-#if ESPNOW_DEBUG
-        Serial.println("[ESP-NOW] ERROR: InitializeESPNow()");
-#endif
+        #if ESPNOW_DEBUG
+                Serial.println("[ESP-NOW] ERROR: InitializeESPNow()");
+        #endif
         return false;
     }
 
     m_peer = CreatePeerInfo();
+    #if ESPNOW_DEBUG
+        Serial.println("Peer created");
+    #endif    
 
     if (!RegisterPeer())
     {
-#if ESPNOW_DEBUG
-        Serial.println("[ESP-NOW] ERROR: RegisterPeer()");
-#endif
-
+        #if ESPNOW_DEBUG
+                Serial.println("[ESP-NOW] ERROR: RegisterPeer()");
+        #endif
         esp_now_deinit();
 
         return false;
     }
+    #if ESPNOW_DEBUG
+            Serial.println("OK -> RegisterPeer()");
+    #endif
 
     m_initialized = true;
+    #if ESPNOW_DEBUG
+            Serial.println("m_initialized = TRUE");
+    #endif    
 
 #if ESPNOW_DEBUG
 
@@ -184,18 +198,31 @@ bool ESPNowHandler::Send(
     const std::uint8_t* packet,
     std::size_t length) noexcept
 {
+    Serial.print("Send this = ");
+    Serial.println(reinterpret_cast<uint32_t>(this), HEX);
+
+    Serial.print("m_initialized = ");
+    Serial.println(m_initialized ? "TRUE" : "FALSE");
+
     if (!IsInitialized())
     {
+        Serial.println("EXIT -> Not initialized");
         return false;
     }
+
+    Serial.print("length = ");
+    Serial.println(length);
 
     if ((packet == nullptr) ||
         (length == 0))
     {
+        Serial.println("EXIT -> Invalid packet");
         return false;
     }
 
 #if ESPNOW_DEBUG
+
+    Serial.println("Reached TX block");
 
     Serial.print("[ESP-NOW] TX (");
     Serial.print(length);
@@ -222,8 +249,59 @@ bool ESPNowHandler::Send(
             packet,
             length);
 
+    Serial.print("esp_now_send = ");
+    Serial.println(result);
+
     return IsSuccess(result);
 }
+
+
+// bool ESPNowHandler::Send(
+//     const std::uint8_t* packet,
+//     std::size_t length) noexcept
+// {
+//     Serial.print("Send this = ");
+//     Serial.println(reinterpret_cast<uint32_t>(this), HEX);
+//     if (!IsInitialized())
+//     {
+//         return false;
+//     }
+
+//     if ((packet == nullptr) ||
+//         (length == 0))
+//     {
+//         return false;
+//     }
+
+// #if ESPNOW_DEBUG
+
+//     Serial.print("[ESP-NOW] TX (");
+//     Serial.print(length);
+//     Serial.print(" bytes): ");
+
+//     for (std::size_t i = 0; i < length; ++i)
+//     {
+//         if (packet[i] < 16)
+//         {
+//             Serial.print('0');
+//         }
+
+//         Serial.print(packet[i], HEX);
+//         Serial.print(' ');
+//     }
+
+//     Serial.println();
+
+// #endif
+
+//     const auto result =
+//         esp_now_send(
+//             m_peer.peer_addr,
+//             packet,
+//             length);
+
+//     return IsSuccess(result);
+// }
 
 //=============================================================================
 // Inicialización

@@ -103,7 +103,7 @@ void ReceiverController::Update() noexcept
 
     if (m_bluetoothManager.Receive(command))
     {
-        ProcessCommand(command);
+        ProcessCommand(command);        
         return;
     }
 
@@ -113,7 +113,8 @@ void ReceiverController::Update() noexcept
 
     if (m_receiver.Receive(command))
     {
-        ProcessCommand(command);
+        ProcessCommand(command);        
+        return;
     }
 }
 

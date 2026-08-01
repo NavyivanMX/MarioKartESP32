@@ -17,10 +17,6 @@
 #include <MKShared.h>
 
 #include "BluetoothTransport.h"
-
-#include "Protocol/Packet.h"
-#include "Protocol/PacketType.h"
-
 #include "Protocol/VehicleStatus.h"
 
 namespace MK
@@ -57,6 +53,7 @@ public:
     // VehicleStatus
     //=========================================================================
 
+    [[nodiscard]]
     bool Send(
         const Protocol::VehicleStatus& status) noexcept;
 

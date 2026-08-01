@@ -4,16 +4,21 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Serializador genérico para cualquier Packet<T>.
+ * Serializa y deserializa cualquier Packet<TPayload>.
+ *
+ * Esta clase únicamente conoce la estructura Packet y copia el Header y
+ * el Payload hacia/desde un buffer de memoria.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_PACKETSERIALIZER_H
-#define MK_RECEIVER_PACKETSERIALIZER_H
+#ifndef MK_SHARED_PACKET_SERIALIZER_H
+#define MK_SHARED_PACKET_SERIALIZER_H
 
 //=============================================================================
 // Includes
 //=============================================================================
 
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 
 #include "Packet.h"
@@ -30,6 +35,7 @@ public:
     //=========================================================================
 
     template<typename TPayload>
+    [[nodiscard]]
     static bool Serialize(
         const Packet<TPayload>& packet,
         std::uint8_t* buffer,
@@ -40,10 +46,7 @@ public:
             return false;
         }
 
-        constexpr std::size_t packetSize =
-            sizeof(Packet<TPayload>);
-
-        if (length < packetSize)
+        if (length < PacketSize<TPayload>())
         {
             return false;
         }
@@ -51,7 +54,7 @@ public:
         std::memcpy(
             buffer,
             &packet,
-            packetSize);
+            PacketSize<TPayload>());
 
         return true;
     }
@@ -61,6 +64,7 @@ public:
     //=========================================================================
 
     template<typename TPayload>
+    [[nodiscard]]
     static bool Deserialize(
         const std::uint8_t* buffer,
         std::size_t length,
@@ -71,10 +75,7 @@ public:
             return false;
         }
 
-        constexpr std::size_t packetSize =
-            sizeof(Packet<TPayload>);
-
-        if (length < packetSize)
+        if (length < PacketSize<TPayload>())
         {
             return false;
         }
@@ -82,12 +83,12 @@ public:
         std::memcpy(
             &packet,
             buffer,
-            packetSize);
+            PacketSize<TPayload>());
 
         return true;
     }
 };
 
-} // namespace MK::Protocol
+}
 
-#endif // MK_RECEIVER_PACKETSERIALIZER_H
+#endif // MK_SHARED_PACKET_SERIALIZER_H
