@@ -1,50 +1,46 @@
 ﻿/******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : PacketSerializer.cs
- * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Serializa y deserializa paquetes del protocolo de comunicación entre
- * Android y el Receiver.
+ * Serializa y deserializa Packet.
+ *
+ * Formato:
+ *
+ * +------------+
+ * | Type        | 1 byte
+ * +------------+
+ * | PayloadSize | 2 bytes
+ * +------------+
+ * | Payload     | N bytes
+ * +------------+
  ******************************************************************************/
 
 using System;
 
 namespace MarioKart.Android.Communication.Protocol
 {
-
     public static class PacketSerializer
     {
-        //=========================================================================
-        // Serialize
-        //=========================================================================
+        //=====================================================================
+        // Serialización
+        //=====================================================================
 
-        /// <summary>
-        /// Convierte un Packet a un arreglo de bytes.
-        /// Formato actual:
-        ///
-        /// [0]      PacketType
-        /// [1..2]   PayloadLength (UInt16)
-        /// [3..N]   Payload
-        /// </summary>
         public static byte[] Serialize(
             Packet packet)
         {
             if (packet == null)
             {
-                throw new ArgumentNullException(nameof(packet));
+                return null;
             }
 
-            packet.Payload ??= Array.Empty<byte>();
-
-            packet.PayloadLength =
-                (ushort)packet.Payload.Length;
+            int packetSize =
+                1 +                      // Type
+                2 +                      // PayloadSize
+                packet.Payload.Length;
 
             byte[] buffer =
-                new byte[
-                    1 +
-                    sizeof(ushort) +
-                    packet.PayloadLength];
+                new byte[packetSize];
 
             //-------------------------------------------------------------
             // PacketType
@@ -54,73 +50,81 @@ namespace MarioKart.Android.Communication.Protocol
                 (byte)packet.Type;
 
             //-------------------------------------------------------------
-            // PayloadLength
+            // PayloadSize (Little Endian)
             //-------------------------------------------------------------
 
-            BitConverter
-                .GetBytes(packet.PayloadLength)
-                .CopyTo(buffer, 1);
+            BitConverter.GetBytes(
+                packet.PayloadSize)
+                .CopyTo(
+                    buffer,
+                    1);
 
             //-------------------------------------------------------------
             // Payload
             //-------------------------------------------------------------
 
-            packet.Payload.CopyTo(
-                buffer,
-                3);
+            if (packet.Payload.Length > 0)
+            {
+                Array.Copy(
+                    packet.Payload,
+                    0,
+                    buffer,
+                    3,
+                    packet.Payload.Length);
+            }
 
             return buffer;
         }
 
-        //=========================================================================
-        // Deserialize
-        //=========================================================================
+        //=====================================================================
+        // Deserialización
+        //=====================================================================
 
-        /// <summary>
-        /// Convierte un arreglo de bytes en un Packet.
-        /// </summary>
         public static Packet Deserialize(
             ReadOnlySpan<byte> buffer)
         {
+            //-------------------------------------------------------------
+            // Header
+            //-------------------------------------------------------------
+
             if (buffer.Length < 3)
             {
-                throw new ArgumentException(
-                    "Packet inválido.");
+                return null;
             }
 
-            Packet packet =
-                new Packet
-                {
-                    Type =
-                        (PacketType)buffer[0],
+            PacketType type =
+                (PacketType)buffer[0];
 
-                    PayloadLength =
-                    BitConverter.ToUInt16(
-                        buffer
-                            .Slice(1, 2)
-                            .ToArray(),
-                        0),
+            ushort payloadSize =
+                BitConverter.ToUInt16(
+                    buffer
+                        .Slice(1, 2)
+                        .ToArray(),
+                    0);
 
-                    Payload =
-                        Array.Empty<byte>()
-                };
+            //-------------------------------------------------------------
+            // Validar tamaño
+            //-------------------------------------------------------------
+
+            if (buffer.Length < 3 + payloadSize)
+            {
+                return null;
+            }
 
             //-------------------------------------------------------------
             // Payload
             //-------------------------------------------------------------
 
-            if (packet.PayloadLength > 0)
-            {
-                packet.Payload =
-                    buffer
-                        .Slice(
-                            3,
-                            packet.PayloadLength)
-                        .ToArray();
-            }
+            byte[] payload =
+                buffer
+                    .Slice(
+                        3,
+                        payloadSize)
+                    .ToArray();
 
-            return packet;
+            return new Packet(
+                type,
+                payload);
         }
     }
-
 }

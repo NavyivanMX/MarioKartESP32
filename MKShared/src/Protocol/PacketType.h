@@ -35,7 +35,11 @@ enum class PacketType : std::uint8_t
     // Receiver -> Android
     //---------------------------------------------------------------------
 
-    VehicleStatus = 0x02
+    VehicleStatus = 0x02,
+    //---------------------------------------------------------------------
+    // Android -> Receiver
+    //---------------------------------------------------------------------
+    RequestVehicleStatus = 0x03
 };
 
 } // namespace MK::Protocol

@@ -1,46 +1,61 @@
-﻿using System;
+﻿/******************************************************************************
+ * Proyecto : MarioKart ESP32 RC
+ * Archivo  : VehicleStatusSerializer.cs
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Serializa y deserializa VehicleStatus.
+ ******************************************************************************/
 
-namespace MarioKart.Android.Communication
+using MarioKart.Android.Shared;
+
+namespace MarioKart.Android.Communication.Protocol
 {
-    /// <summary>
-    /// Serialización del estado del vehículo.
-    /// </summary>
     public static class VehicleStatusSerializer
     {
-        /// <summary>
-        /// Tamaño del payload.
-        /// </summary>
-        public const int PayloadSize = 1;
-
-        //======================================================================
-        // Serialize
-        //======================================================================
-
-        public static byte[] Serialize(
-            VehicleStatus status)
-        {
-            return new[]
-            {
-            status.DrivingProfile
-        };
-        }
-
-        //======================================================================
-        // Deserialize
-        //======================================================================
+        //=====================================================================
+        // Deserialización
+        //=====================================================================
 
         public static VehicleStatus Deserialize(
-            ReadOnlySpan<byte> payload)
+            byte[] payload)
         {
-            if (payload.Length < PayloadSize)
+            if (payload == null)
             {
-                throw new ArgumentException(
-                    "Payload inválido.");
+                return null;
+            }
+
+            //-------------------------------------------------------------
+            // El payload actual contiene únicamente DrivingProfile
+            //-------------------------------------------------------------
+
+            if (payload.Length < 1)
+            {
+                return null;
             }
 
             return new VehicleStatus
             {
-                DrivingProfile = payload[0]
+                DrivingProfile =
+                    (DrivingProfile)payload[0]
+            };
+        }
+
+        //=====================================================================
+        // Serialización (por si luego la necesitamos)
+        //=====================================================================
+
+        public static byte[] Serialize(
+            VehicleStatus status)
+        {
+            if (status == null)
+            {
+                return null;
+            }
+
+            return new byte[]
+            {
+                (byte)status.DrivingProfile
             };
         }
     }

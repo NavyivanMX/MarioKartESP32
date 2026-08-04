@@ -42,6 +42,12 @@ namespace MarioKart.Android.Controllers
         public DrivingState State { get; } =
             new DrivingState();
 
+        /// <summary>
+        /// Devuelve el DriverCommand correspondiente al estado actual.
+        /// </summary>
+        public DriverCommand CurrentCommand =>
+            BuildCommand();
+
         //---------------------------------------------------------------------
         // Comunicación
         //---------------------------------------------------------------------

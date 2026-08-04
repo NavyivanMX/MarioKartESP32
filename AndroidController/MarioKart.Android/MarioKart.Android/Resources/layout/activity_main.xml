@@ -75,6 +75,43 @@
 
         app:layout_constraintEnd_toEndOf="@id/btnBluetooth"/>
 
+  <MarioKart.Android.Controls.FloatingButton
+
+    android:id="@+id/btnProfile"
+
+    android:layout_width="72dp"
+
+    android:layout_height="72dp"
+
+    android:layout_marginEnd="24dp"
+
+    app:layout_constraintTop_toBottomOf="@id/btnSettings"
+
+    app:layout_constraintEnd_toEndOf="parent"/>
+
+  <TextView
+
+    android:id="@+id/txtProfileButton"
+
+    android:layout_width="wrap_content"
+
+    android:layout_height="wrap_content"
+
+    android:text="Profile"
+
+    android:textColor="#FFFFFF"
+
+    android:textStyle="bold"
+
+    android:textSize="14sp"
+
+    android:layout_marginTop="8dp"
+
+    app:layout_constraintTop_toBottomOf="@id/btnProfile"
+
+    app:layout_constraintStart_toStartOf="@id/btnProfile"
+
+    app:layout_constraintEnd_toEndOf="@id/btnProfile"/>
     <!--==============================================================-->
     <!-- Configuración -->
     <!--==============================================================-->
@@ -221,4 +258,139 @@
 
         android:layout_marginBottom="36dp"/>
 
+  <!--==============================================================-->
+  <!-- Developer Panel -->
+  <!--==============================================================-->
+
+  <LinearLayout
+      android:id="@+id/layoutDeveloper"
+
+      android:layout_width="0dp"
+
+      android:layout_height="wrap_content"
+
+      android:orientation="vertical"
+
+      android:gravity="center_horizontal"
+
+      android:padding="8dp"
+
+      android:minHeight="72dp"
+
+      android:background="@drawable/developer_panel"
+
+      android:visibility="gone"
+
+      android:layout_marginTop="20dp"
+
+      android:layout_marginStart="12dp"
+
+      android:layout_marginEnd="12dp"
+
+      app:layout_constraintTop_toTopOf="parent"
+
+      app:layout_constraintStart_toEndOf="@id/btnBluetooth"
+
+      app:layout_constraintEnd_toStartOf="@id/btnSettings">
+
+    <!--==========================================================-->
+    <!-- Título -->
+    <!--==========================================================-->
+
+    <TextView
+        android:id="@+id/txtProfileTitle"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:text="DRIVER PROFILE"
+
+        android:textColor="#BBBBBB"
+
+        android:textStyle="bold"
+
+        android:textSize="10sp"/>
+
+    <!--==========================================================-->
+    <!-- Perfil + LED -->
+    <!--==========================================================-->
+
+    <LinearLayout
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:orientation="horizontal"
+
+        android:gravity="center_vertical"
+
+        android:layout_marginTop="4dp">
+
+      <TextView
+          android:id="@+id/txtCurrentProfile"
+
+          android:layout_width="wrap_content"
+
+          android:layout_height="wrap_content"
+
+          android:text="txtCurrentProfile"
+
+          android:textColor="#FFFFFF"
+
+          android:textStyle="bold"
+
+          android:textSize="20sp"/>
+
+      <View
+          android:id="@+id/viewTx"
+
+          android:layout_width="12dp"
+
+          android:layout_height="12dp"
+
+          android:layout_marginStart="8dp"
+
+          android:background="@drawable/circle_blue"/>
+
+    </LinearLayout>
+
+    <!--==========================================================-->
+    <!-- Telemetría -->
+    <!--==========================================================-->
+
+    <TextView
+        android:id="@+id/txtTelemetry"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:layout_marginTop="6dp"
+
+        android:text="TX:0    RX:0"
+
+        android:textColor="#DDDDDD"
+
+        android:textSize="12sp"/>
+
+    <!--==========================================================-->
+    <!-- RSSI -->
+    <!--==========================================================-->
+
+    <TextView
+        android:id="@+id/txtRSSI"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:text="RSSI: -- dBm"
+
+        android:textColor="#AAAAAA"
+
+        android:textSize="11sp"/>
+
+  </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

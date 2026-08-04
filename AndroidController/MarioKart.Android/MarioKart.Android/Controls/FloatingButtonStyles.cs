@@ -100,5 +100,28 @@ namespace MarioKart.Android.Controls
 
                 GlowRadius = 24f
             };
+
+        //---------------------------------------------------------------------
+        // Profile
+        //---------------------------------------------------------------------
+
+        public static FloatingButtonStyle Profile =>
+            new FloatingButtonStyle
+            {
+                BorderColor =
+                    Color.Rgb(
+                        255,
+                        230,
+                        120),
+
+                GlowColor =
+                    Color.Argb(
+                        160,
+                        255,
+                        210,
+                        0),
+
+                GlowRadius = 24f
+            };
     }
 }

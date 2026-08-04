@@ -10,8 +10,8 @@
  * Todo paquete enviado o recibido comienza con un PacketHeader.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_PACKET_H
-#define MK_RECEIVER_PACKET_H
+#ifndef MK_SHARED_PACKET_H
+#define MK_SHARED_PACKET_H
 
 //=============================================================================
 // Includes
@@ -29,7 +29,7 @@ namespace MK::Protocol
 // PacketHeader
 //=============================================================================
 
-struct PacketHeader
+struct __attribute__((packed)) PacketHeader
 {
     //---------------------------------------------------------------------
     // Tipo de paquete
@@ -49,7 +49,7 @@ struct PacketHeader
 //=============================================================================
 
 template<typename TPayload>
-struct Packet
+struct __attribute__((packed)) Packet
 {
     PacketHeader header;
 
@@ -68,4 +68,4 @@ constexpr std::size_t PacketSize() noexcept
 
 } // namespace MK::Protocol
 
-#endif // MK_RECEIVER_PACKET_H
+#endif // MK_SHARED_PACKET_H

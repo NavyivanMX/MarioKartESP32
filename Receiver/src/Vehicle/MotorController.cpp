@@ -35,6 +35,7 @@ void MotorController::Drive(
     using Types::Vehicle::Steering;
     using Types::Vehicle::Turbo;
 
+Serial.println("Motor::Drive");
     //---------------------------------------------------------------------
     // Potencias según el perfil seleccionado
     //---------------------------------------------------------------------
@@ -70,6 +71,10 @@ void MotorController::Drive(
 
     left.power = 0;
     right.power = 0;
+
+    Serial.printf(
+    "Forward=%d\n",
+    forwardPower);
 
     //---------------------------------------------------------------------
     // Movimiento

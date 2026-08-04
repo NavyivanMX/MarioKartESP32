@@ -4,106 +4,116 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Orquesta el transporte de comunicación utilizado por la aplicación.
+ * Orquesta toda la infraestructura de comunicación.
  ******************************************************************************/
 
+using Android.Bluetooth;
+using MarioKart.Android.Communication.Bluetooth;
+using MarioKart.Android.Communication.Protocol;
+using MarioKart.Android.Communication.Telemetry;
 using System;
 using System.Threading.Tasks;
-
-using Android.Bluetooth;
+using BluetoothManager = MarioKart.Android.Communication.Bluetooth.BluetoothManager;
 
 namespace MarioKart.Android.Communication
 {
-    /// <summary>
-    /// Punto central de acceso al transporte de comunicación.
-    /// Orquesta la conexión y el intercambio de datos sin conocer
-    /// la implementación concreta del transporte.
-    /// </summary>
     public sealed class CommunicationManager
     {
-        //---------------------------------------------------------------------
+        //=====================================================================
         // Campos
-        //---------------------------------------------------------------------
+        //=====================================================================
 
-        private readonly ICommunicationTransport m_transport;
+        private readonly BluetoothConnection m_connection;
 
-        //---------------------------------------------------------------------
-        // Constructor
-        //---------------------------------------------------------------------
+        private readonly BluetoothTransport m_transport;
 
-        public CommunicationManager(
-            ICommunicationTransport transport)
+        private readonly BluetoothManager m_bluetoothManager;
+
+        private readonly TelemetryManager m_telemetryManager;
+
+        public TelemetryManager TelemetryManager
         {
-            m_transport =
-                transport
-                ?? throw new ArgumentNullException(
-                    nameof(transport));
+            get
+            {
+                return m_telemetryManager;
+            }
         }
 
-        //---------------------------------------------------------------------
+        //=====================================================================
+        // Constructor
+        //=====================================================================
+
+        public CommunicationManager()
+        {
+            m_connection =
+                new BluetoothConnection();
+
+            m_transport =
+                new BluetoothTransport(
+                    m_connection);
+
+            m_bluetoothManager =
+                new BluetoothManager(
+                    m_transport);
+
+            m_telemetryManager =
+                new TelemetryManager(
+                    m_bluetoothManager);
+        }
+
+        //=====================================================================
         // Estado
-        //---------------------------------------------------------------------
+        //=====================================================================
 
         public bool IsConnected =>
-            m_transport.IsConnected;
+            m_connection.IsConnected;
 
+        public TelemetryManager Telemetry =>
+            m_telemetryManager;
         //---------------------------------------------------------------------
-        // Conexión
-        //---------------------------------------------------------------------
-
-        public async Task<bool> ConnectBluetoothAsync(
-            BluetoothDevice device)
-        {
-            if (device == null)
-            {
-                return false;
-            }
-
-            return await
-                m_transport.ConnectAsync(device);
-        }
-
-        public async Task DisconnectAsync()
-        {
-            await m_transport.DisconnectAsync();
-        }
-
-        //---------------------------------------------------------------------
-        // Comunicación
+        // Envío de paquetes
         //---------------------------------------------------------------------
 
         public async Task SendAsync(
-            byte[] packet)
+            Packet packet)
         {
             if (packet == null)
             {
                 return;
             }
 
-            if (!IsConnected)
-            {
-                return;
-            }
-
-            await m_transport.SendAsync(
+            await m_bluetoothManager.SendAsync(
                 packet);
         }
 
-        public async Task<int> ReceiveAsync(
-            byte[] buffer)
+        //=====================================================================
+        // Conexión
+        //=====================================================================
+
+        public async Task<bool> ConnectAsync(
+            BluetoothDevice device)
         {
-            if (buffer == null)
+            bool connected =
+                await m_connection.ConnectAsync(
+                    device);
+
+            if (connected)
             {
-                return 0;
+                m_bluetoothManager.Start();
             }
 
-            if (!IsConnected)
-            {
-                return 0;
-            }
+            return connected;
+        }
 
-            return await m_transport.ReceiveAsync(
-                buffer);
+        //=====================================================================
+        // Desconexión
+        //=====================================================================
+
+        public void Disconnect()
+        {
+            m_bluetoothManager.Stop();
+
+            m_connection.Disconnect();
         }
     }
 }

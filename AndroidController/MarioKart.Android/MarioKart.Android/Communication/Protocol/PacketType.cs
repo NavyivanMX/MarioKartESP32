@@ -6,8 +6,10 @@
     /// </summary>
     public enum PacketType : byte
     {
-        DriverCommand = 0,
+        DriverCommand = 0x01,
 
-        VehicleStatus = 1
+        VehicleStatus = 0x02,
+
+        RequestVehicleStatus = 0x03
     }
 }

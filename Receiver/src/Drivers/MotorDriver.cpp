@@ -73,6 +73,7 @@ void MotorDriver::SetLeftMotor(
     Types::Vehicle::Direction direction,
     std::uint8_t power) noexcept
 {
+
     ApplyMotor(
         Pins::LeftMotorIn1,
         Pins::LeftMotorIn2,
@@ -86,6 +87,7 @@ void MotorDriver::SetRightMotor(
     Types::Vehicle::Direction direction,
     std::uint8_t power) noexcept
 {
+    Serial.println("RIGHT Forward");
     ApplyMotor(
         Pins::RightMotorIn1,
         Pins::RightMotorIn2,
@@ -107,6 +109,12 @@ void MotorDriver::ApplyMotor(
     Types::Vehicle::Direction direction,
     std::uint8_t power) noexcept
 {
+
+        Serial.println("LEFT Forward");
+    Serial.printf(
+    "PWM Pin=%u  Power=%u\n",
+    pwmPin,
+    power);
     switch (direction)
     {
         //-----------------------------------------------------------------

@@ -39,10 +39,11 @@ void VehicleController::Update(
     const Protocol::DriverCommand& command,
     const VehicleProfiles::DrivingProfile& profile) noexcept
 {
+    
     //---------------------------------------------------------------------
     // Movimiento
     //---------------------------------------------------------------------
-
+    Serial.println("Calling Motor Controller");
     m_motion.Update(
         command,
         profile);

@@ -1,37 +1,65 @@
 ﻿/******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : Packet.cs
- * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Representa un paquete del protocolo de comunicación entre Android
- * y el Receiver.
+ * Representa un paquete del protocolo Bluetooth.
+ *
+ * Equivalente a MK::Protocol::Packet<TPayload>.
  ******************************************************************************/
 
 using System;
 
 namespace MarioKart.Android.Communication.Protocol
 {
-
-    /// <summary>
-    /// Cabecera común para todos los paquetes.
-    /// El payload se serializa por separado.
-    /// </summary>
     public sealed class Packet
     {
+        //=====================================================================
+        // Constructor
+        //=====================================================================
+
+        public Packet(
+            PacketType type,
+            byte[] payload)
+        {
+            Payload =
+                payload
+                ?? Array.Empty<byte>();
+
+            Type =
+                type;
+
+            PayloadSize =
+                (ushort)Payload.Length;
+        }
+
+        //=====================================================================
+        // Propiedades
+        //=====================================================================
+
         /// <summary>
         /// Tipo de paquete.
         /// </summary>
-        public PacketType Type { get; set; }
+        public PacketType Type
+        {
+            get;
+        }
 
         /// <summary>
-        /// Longitud del payload.
+        /// Tamaño del payload.
+        /// Debe coincidir con PacketHeader del Receiver.
         /// </summary>
-        public ushort PayloadLength { get; set; }
+        public ushort PayloadSize
+        {
+            get;
+        }
 
         /// <summary>
-        /// Datos serializados.
+        /// Datos del paquete.
         /// </summary>
-        public byte[] Payload { get; set; } = System.Array.Empty<byte>();
+        public byte[] Payload
+        {
+            get;
+        }
     }
 }

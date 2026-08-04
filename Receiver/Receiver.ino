@@ -38,7 +38,6 @@ void setup()
 
 void loop()
 {
-    g_receiverController.Update();
-
+    g_receiverController.Update();    
     delay(MK::Config::System::LoopPeriodMs);
 }

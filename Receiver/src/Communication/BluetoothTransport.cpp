@@ -25,11 +25,22 @@ bool BluetoothTransport::Begin(
 
 //=============================================================================
 
+// bool BluetoothTransport::Connected() const noexcept
+// {
+//     return g_serial.hasClient();
+// }
+
 bool BluetoothTransport::Connected() const noexcept
 {
-    return g_serial.hasClient();
-}
+    bool connected =
+        g_serial.hasClient();
 
+    Serial.printf(
+        "hasClient=%d\n",
+        connected);
+
+    return connected;
+}
 //=============================================================================
 
 std::size_t BluetoothTransport::Receive(

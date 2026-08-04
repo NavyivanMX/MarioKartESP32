@@ -4,39 +4,36 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Define el contrato para cualquier medio de comunicación utilizado
- * por la aplicación (Bluetooth, WiFi, USB, etc.).
+ * Define el contrato para cualquier transporte de comunicación.
+ *
+ * Un transporte únicamente envía y recibe bytes.
  ******************************************************************************/
 
 using System.Threading.Tasks;
-
-using Android.Bluetooth;
 
 namespace MarioKart.Android.Communication
 {
     public interface ICommunicationTransport
     {
-        //---------------------------------------------------------------------
+        //=====================================================================
         // Estado
-        //---------------------------------------------------------------------
+        //=====================================================================
 
-        bool IsConnected { get; }
+        bool IsConnected
+        {
+            get;
+        }
 
-        //---------------------------------------------------------------------
-        // Conexión
-        //---------------------------------------------------------------------
-
-        Task<bool> ConnectAsync(
-            BluetoothDevice device);
-
-        Task DisconnectAsync();
-
-        //---------------------------------------------------------------------
-        // Comunicación
-        //---------------------------------------------------------------------
+        //=====================================================================
+        // Envío
+        //=====================================================================
 
         Task SendAsync(
-            byte[] packet);
+            byte[] buffer);
+
+        //=====================================================================
+        // Recepción
+        //=====================================================================
 
         Task<int> ReceiveAsync(
             byte[] buffer);

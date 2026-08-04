@@ -4,7 +4,7 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Convierte un DriverCommand en un paquete binario y lo envía utilizando
+ * Convierte un DriverCommand en un Packet y lo envía utilizando
  * el CommunicationManager.
  ******************************************************************************/
 
@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using MarioKart.Android.Protocol;
 using MarioKart.Android.Shared;
+using MarioKart.Android.Communication.Protocol;
 
 namespace MarioKart.Android.Communication
 {
@@ -57,16 +58,22 @@ namespace MarioKart.Android.Communication
                 return false;
             }
 
-            byte[] packet =
-                new byte[
-                    DriverCommandSerializer.PacketSize];
+            //-------------------------------------------------------------
+            // Convertir DriverCommand -> Packet
+            //-------------------------------------------------------------
 
-            if (!DriverCommandSerializer.Serialize(
-                    command,
-                    packet))
+            Packet packet =
+                DriverCommandSerializer.Serialize(
+                    command);
+
+            if (packet == null)
             {
                 return false;
             }
+
+            //-------------------------------------------------------------
+            // Enviar
+            //-------------------------------------------------------------
 
             await m_communication.SendAsync(
                 packet);
