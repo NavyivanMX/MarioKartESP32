@@ -18,7 +18,7 @@ namespace MK
 
 bool BluetoothManager::Begin(
     const char* deviceName) noexcept
-{    
+{
     return m_transport.Begin(
         deviceName);
 }
@@ -28,7 +28,7 @@ bool BluetoothManager::Begin(
 //=============================================================================
 
 bool BluetoothManager::Connected() const noexcept
-{    
+{
     return m_transport.Connected();
 }
 
@@ -43,8 +43,8 @@ bool BluetoothManager::Receive(
     //     Protocol::PacketSize<
     //         Protocol::DriverCommand>()];
 
-    std::uint8_t buffer[7];            
-    
+    std::uint8_t buffer[7];
+
 
     // const std::size_t received =
     //     m_transport.Receive(
@@ -53,18 +53,6 @@ bool BluetoothManager::Receive(
 
     const std::size_t received =
     m_transport.Receive(buffer,7);
-
-    if(received > 0)
-    {
-        Serial.print("RX = ");
-
-        for(std::size_t i=0;i<received;i++)
-        {
-            Serial.printf("%02X ",buffer[i]);
-        }
-
-        Serial.println();
-    }
 
     if(received != sizeof(buffer))
     {
@@ -134,7 +122,7 @@ bool BluetoothManager::Send(
 
     //-------------------------------------------------------------
     // Enviar
-    //-------------------------------------------------------------    
+    //-------------------------------------------------------------
     return m_transport.Send(
         buffer,
         sizeof(buffer));

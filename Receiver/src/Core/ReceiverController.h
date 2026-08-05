@@ -54,6 +54,9 @@ private:
 
 private:
 
+    Protocol::DriverCommand m_lastLoggedCommand{};
+    bool m_firstLog = true;
+
     Protocol::DriverCommand m_lastCommand{};
 
     bool m_hasLastCommand = false;

@@ -21,6 +21,7 @@ using MarioKart.Android.Telemetry;
 using MarioKart.Android.UI;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MarioKart.Android
@@ -62,6 +63,8 @@ namespace MarioKart.Android
         private TextView m_txtBluetooth;
 
         private View m_viewTx;
+
+        private CancellationTokenSource m_driverLoopCancellation;
 
         //---------------------------------------------------------------------
         // Comunicación
@@ -690,6 +693,10 @@ namespace MarioKart.Android
                 //---------------------------------------------------------
 
                 await m_controller.SendCurrentStateAsync();
+
+                m_driverLoopCancellation = new CancellationTokenSource();
+
+                _ = DriverLoopAsync( m_driverLoopCancellation.Token);
             }
             else
             {
@@ -698,6 +705,7 @@ namespace MarioKart.Android
                     "No fue posible conectar.",
                     ToastLength.Short)
                     .Show();
+                m_driverLoopCancellation?.Cancel();
             }
         }
         //---------------------------------------------------------------------
@@ -726,6 +734,7 @@ namespace MarioKart.Android
                         "#F44336"));
 
                 m_btnBluetooth.DisableGlow();
+                m_driverLoopCancellation?.Cancel();
             }
             //-------------------------------------------------------------
             // Driver Profile
@@ -957,9 +966,7 @@ namespace MarioKart.Android
                     {
                         case global::Android.Views.MotionEventActions.Down:
 
-                            onPressed?.Invoke();
-
-                            await SendCurrentStateAsync();
+                            onPressed?.Invoke();                           
 
                             break;
 
@@ -968,8 +975,6 @@ namespace MarioKart.Android
                         case global::Android.Views.MotionEventActions.Cancel:
 
                             onReleased?.Invoke();
-
-                            await SendCurrentStateAsync();
 
                             break;
                     }
@@ -1191,20 +1196,6 @@ namespace MarioKart.Android
             }
         }
 
-        private bool HasCommandChanged(
-    DriverCommand current)
-        {
-            if (m_lastSentCommand == null)
-            {
-                return true;
-            }
-
-            return
-                current.Direction != m_lastSentCommand.Direction ||
-                current.Steering != m_lastSentCommand.Steering ||
-                current.Turbo != m_lastSentCommand.Turbo ||
-                current.DriveMode != m_lastSentCommand.DriveMode;
-        }
         private void StoreLastCommand(
             DriverCommand command)
         {
@@ -1359,6 +1350,53 @@ namespace MarioKart.Android
             catch
             {
             }
+        }
+
+        private async Task DriverLoopAsync(
+        CancellationToken token)
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await SendCurrentCommandAsync();
+
+                    await Task.Delay(50, token);
+                }
+            }
+        private async Task SendCurrentCommandAsync()
+        {
+            //-------------------------------------------------------------
+            // Sin conexión
+            //-------------------------------------------------------------
+
+            if (!m_communication.IsConnected)
+            {
+                return;
+            }
+
+            //-------------------------------------------------------------
+            // Obtener comando actual
+            //-------------------------------------------------------------
+
+            DriverCommand command =
+                m_controller.CurrentCommand;
+
+            //-------------------------------------------------------------
+            // Enviar SIEMPRE
+            //-------------------------------------------------------------
+
+            await m_driverCommandSender.SendAsync(
+                command);
+
+            //-------------------------------------------------------------
+            // Estadísticas
+            //-------------------------------------------------------------
+
+            m_txPackets++;
+
+            //m_lastTx =
+            //    DateTime.Now;
+
+            UpdateDeveloperPanel();
         }
         private void OnVehicleStatusReceived(object sender, TelemetryEventArgs e)
         {

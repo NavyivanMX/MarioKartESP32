@@ -184,7 +184,12 @@ void ReceiverController::ProcessCommand(
             m_lastCommand = command;
             m_hasLastCommand = true;
 
-            m_logger.Log(command);
+            if (m_firstLog || command != m_lastLoggedCommand)
+            {
+                m_logger.Log(command);
+                m_lastLoggedCommand = command;
+                m_firstLog = false;
+            }
         }
 
         //-------------------------------------------------------------
