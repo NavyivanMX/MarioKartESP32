@@ -46,9 +46,6 @@ namespace MarioKart.Android.Communication.Bluetooth
         {
             get
             {
-                ConsoleLogger.Log(
-                    $"Transport.IsConnected = {m_connection.IsConnected}");
-
                 return m_connection.IsConnected;
             }
         }
@@ -98,9 +95,6 @@ namespace MarioKart.Android.Communication.Bluetooth
                     buffer.Length);
 
                 await stream.FlushAsync();
-
-                ConsoleLogger.Log(
-                    $"TX [{buffer.Length}] : {BitConverter.ToString(buffer)}");
             }
             catch (Exception ex)
             {
@@ -146,7 +140,7 @@ namespace MarioKart.Android.Communication.Bluetooth
                 if (bytesRead > 0)
                 {
                     ConsoleLogger.Log(
-                        $"RX [{bytesRead}] : {BitConverter.ToString(buffer, 0, bytesRead)}");
+                        $"BluetoothTransport: Received {bytesRead} bytes.");                        
                 }
 
                 return bytesRead;

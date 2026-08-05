@@ -94,8 +94,7 @@ bool ReceiverController::Begin() noexcept
 //=============================================================================
 
 void ReceiverController::Update() noexcept
-{
-    Serial.println("Receiver Update");
+{    
     Protocol::DriverCommand command;
 
     //-------------------------------------------------------------
@@ -126,16 +125,7 @@ void ReceiverController::Update() noexcept
 void ReceiverController::ProcessCommand(
     const Protocol::DriverCommand& command) noexcept
 {
-    Serial.printf(
-    "PacketSize=%u\n",
-    Protocol::PacketSize<
-        Protocol::DriverCommand>());
-    Serial.printf(
-        "PayloadSize = %u\n",
-        sizeof(Protocol::DriverCommand));   
-    Serial.printf(
-        "HeaderSize = %u\n",
-        sizeof(Protocol::PacketHeader));             
+       
     //-------------------------------------------------------------
     // Cambio de perfil (flanco)
     //-------------------------------------------------------------
@@ -148,8 +138,6 @@ void ReceiverController::ProcessCommand(
         !m_gravityPressedLastFrame)
     {
         m_profileManager.Next();
-
-        Serial.println(">>> NEXT PROFILE <<<");
 
         m_logger.LogProfile(
             m_profileManager.Current());
@@ -183,15 +171,6 @@ void ReceiverController::ProcessCommand(
     //-------------------------------------------------------------
 
     m_profileManager.ClearProfileChanged();
-
-    Serial.println("Vehicle Update");
-
-    // if (m_profileManager.ProfileChanged())
-    // {
-    //     SendVehicleStatus();
-
-    //     m_profileManager.ClearProfileChanged();
-    // }        
 }
     void ReceiverController::SendVehicleStatus()
     {

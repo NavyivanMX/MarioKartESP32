@@ -56,9 +56,6 @@ namespace MarioKart.Android.Communication.Bluetooth
         {
             get
             {
-                ConsoleLogger.Log(
-                    $"BluetoothManager.IsConnected = {m_transport.IsConnected}");
-
                 return m_transport.IsConnected;
             }
         }
@@ -173,10 +170,6 @@ namespace MarioKart.Android.Communication.Bluetooth
             {
                 return;
             }
-
-            ConsoleLogger.Log(
-                $"Packet RX : {packet.Type}");
-
             PacketReceived?.Invoke(
                 this,
                 packet);

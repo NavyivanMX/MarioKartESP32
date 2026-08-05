@@ -130,12 +130,7 @@ void Controller::Update() noexcept
         Serial.println("======================================");
         return;
     }
-
-    Serial.print("Packet Size : ");
-    Serial.println(sizeof(buffer));
-
-    Serial.print("Bytes : ");
-
+    
     for (std::size_t i = 0; i < sizeof(buffer); ++i)
     {
         if (buffer[i] < 16)

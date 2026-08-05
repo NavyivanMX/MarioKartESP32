@@ -139,9 +139,7 @@ namespace MarioKart.Android
             {
                 m_txtCurrentProfile.Text =
                     "Sin asignar";
-            }
-            ConsoleLogger.Log(
-    $"Bluetooth Button = {(m_btnBluetooth == null ? "NULL" : "OK")}");
+            }            
         }
 
         //---------------------------------------------------------------------
@@ -414,17 +412,11 @@ namespace MarioKart.Android
         //-------------------------------------------------------------
         private void InitializeTelemetry()
         {
-            ConsoleLogger.Log("InitializeTelemetry()");
-            ConsoleLogger.Log(
-                m_telemetryManager == null
-                    ? "Telemetry NULL"
-                    : "Telemetry OK");
             if (m_telemetryManager == null)
             {
                 return;
             }            
             m_telemetryManager.VehicleStatusReceived +=  OnVehicleStatusReceived;
-            ConsoleLogger.Log("Subscribed VehicleStatusReceived");
         }
 
         private void InitializeController()
@@ -511,16 +503,13 @@ namespace MarioKart.Android
         //---------------------------------------------------------------------
 
         private void RegisterBluetoothButton()
-        {
-            ConsoleLogger.Log("Register Bluetooth Click");
+        {            
             m_btnBluetooth.Click +=
                 async (s, e) =>
-                {
-                    ConsoleLogger.Log("ENTRE AL CLICK");
+                {         
                     //---------------------------------------------------------
                     // Ya conectado
-                    //---------------------------------------------------------
-                    ConsoleLogger.Log($"Connected={m_communication.IsConnected}");
+                    //---------------------------------------------------------                 
                     if (m_communication.IsConnected)
                     {
                         ShowDisconnectDialog();
@@ -592,8 +581,7 @@ namespace MarioKart.Android
         {
             //---------------------------------------------------------
             // Permisos
-            //---------------------------------------------------------
-            ConsoleLogger.Log("RequestPermissionsAsync()");
+            //---------------------------------------------------------            
             //ShowMessage($"SDK: {(int)Build.VERSION.SdkInt}");
             bool granted =
                 await m_permissionManager
@@ -1039,7 +1027,6 @@ namespace MarioKart.Android
 
     Permission[] grantResults)
         {
-            ConsoleLogger.Log("Permissions callback!");
             base.OnRequestPermissionsResult(
 
                 requestCode,

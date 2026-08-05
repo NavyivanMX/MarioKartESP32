@@ -34,11 +34,6 @@ bool BluetoothTransport::Connected() const noexcept
 {
     bool connected =
         g_serial.hasClient();
-
-    Serial.printf(
-        "hasClient=%d\n",
-        connected);
-
     return connected;
 }
 //=============================================================================

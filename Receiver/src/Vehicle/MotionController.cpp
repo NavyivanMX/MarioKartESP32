@@ -21,18 +21,6 @@ void MotionController::Update(
     const Protocol::DriverCommand& command,
     const VehicleProfiles::DrivingProfile& profile) noexcept
 {
-    Serial.printf(
-    "Direction=%u\n",
-    (uint8_t)command.direction);
-
-Serial.printf(
-    "Turbo=%u\n",
-    (uint8_t)command.turbo);
-
-Serial.printf(
-    "DriveMode=%u\n",
-    (uint8_t)command.driveMode);
-    
     m_motor.Drive(
         command,
         profile);

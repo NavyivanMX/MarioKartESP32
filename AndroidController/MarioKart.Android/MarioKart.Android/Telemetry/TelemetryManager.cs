@@ -56,8 +56,6 @@ namespace MarioKart.Android.Communication.Telemetry
             object sender,
             Packet packet)
         {
-            ConsoleLogger.Log(
-    $"TelemetryManager Packet Type = {packet.Type}");
             if (packet == null)
             {
                 return;
@@ -68,31 +66,19 @@ namespace MarioKart.Android.Communication.Telemetry
                 return;
             }
 
-            ConsoleLogger.Log(
-$"TelemetryManager Packet Type = {packet.Type}");
-
-            ConsoleLogger.Log( $" VehicleStatus Payload Length = {packet.Payload.Length}");
-
             VehicleStatus status =
                 VehicleStatusSerializer.Deserialize(
-                    packet.Payload);
-
-            ConsoleLogger.Log($"VehicleStatus Deserialize = {(status == null ? "NULL" : "OK")}");
+                    packet.Payload);            
 
             if (status == null)
             {
                 return;
             }
 
-            ConsoleLogger.Log(
-                $"Subscribers = {(VehicleStatusReceived == null ? "NONE" : "OK")}");
-
             VehicleStatusReceived?.Invoke(
                 this,
                 new TelemetryEventArgs(status));
 
-            ConsoleLogger.Log(
-                "VehicleStatusReceived.Invoke() ejecutado");
         }
     }
 }

@@ -50,37 +50,16 @@ esp_now_peer_info_t CreatePeerInfo()
     return peer;
 }
 
-// void OnDataSent(    const wifi_tx_info_t* tx_info,    esp_now_send_status_t status)
-// {
-//     (void)tx_info;
-
-//     #if ESPNOW_DEBUG
-
-//         if (status == ESP_NOW_SEND_SUCCESS)
-//         {
-//             Serial.println(
-//                 "[ESP-NOW] Packet transmitted successfully.");
-//         }
-//         else
-//         {
-//             Serial.println(
-//                 "[ESP-NOW] Packet transmission FAILED.");
-//         }
-
-//     #endif
-// }
-
 void OnDataSent(
     const wifi_tx_info_t* tx_info,
     esp_now_send_status_t status)
 {
     (void)tx_info;
-
-    Serial.print("[ESP-NOW] Callback Status: ");
+    
 
     if (status == ESP_NOW_SEND_SUCCESS)
     {
-        Serial.println("SUCCESS");
+        Serial.println("ESP_Now SUCCESS");
     }
     else
     {
@@ -254,54 +233,6 @@ bool ESPNowHandler::Send(
 
     return IsSuccess(result);
 }
-
-
-// bool ESPNowHandler::Send(
-//     const std::uint8_t* packet,
-//     std::size_t length) noexcept
-// {
-//     Serial.print("Send this = ");
-//     Serial.println(reinterpret_cast<uint32_t>(this), HEX);
-//     if (!IsInitialized())
-//     {
-//         return false;
-//     }
-
-//     if ((packet == nullptr) ||
-//         (length == 0))
-//     {
-//         return false;
-//     }
-
-// #if ESPNOW_DEBUG
-
-//     Serial.print("[ESP-NOW] TX (");
-//     Serial.print(length);
-//     Serial.print(" bytes): ");
-
-//     for (std::size_t i = 0; i < length; ++i)
-//     {
-//         if (packet[i] < 16)
-//         {
-//             Serial.print('0');
-//         }
-
-//         Serial.print(packet[i], HEX);
-//         Serial.print(' ');
-//     }
-
-//     Serial.println();
-
-// #endif
-
-//     const auto result =
-//         esp_now_send(
-//             m_peer.peer_addr,
-//             packet,
-//             length);
-
-//     return IsSuccess(result);
-// }
 
 //=============================================================================
 // Inicialización

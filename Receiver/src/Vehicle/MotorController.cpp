@@ -34,8 +34,6 @@ void MotorController::Drive(
     using Types::Vehicle::Direction;
     using Types::Vehicle::Steering;
     using Types::Vehicle::Turbo;
-
-Serial.println("Motor::Drive");
     //---------------------------------------------------------------------
     // Potencias según el perfil seleccionado
     //---------------------------------------------------------------------
