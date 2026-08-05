@@ -49,26 +49,44 @@ bool Controller::Begin()
 void Controller::Update() noexcept
 {
     //---------------------------------------------------------------------
-    // Leer entradas
+    // Actualizar entradas
     //---------------------------------------------------------------------
 
-    if (!m_inputManager.Update())
+    m_inputManager.Update();
+
+    //---------------------------------------------------------------------
+    // ¿Es momento de transmitir?
+    //---------------------------------------------------------------------
+
+    const std::uint32_t now =
+        millis();
+
+    if ((now - m_lastTransmitTime) <
+        TransmitterConfig::TransmitPeriodMs)
     {
         return;
     }
 
+    m_lastTransmitTime = now;
+
     //---------------------------------------------------------------------
-    // Obtener comando
+    // Obtener comando actual
     //---------------------------------------------------------------------
 
     const auto& command =
         m_inputManager.GetDriverCommand();
 
     //---------------------------------------------------------------------
-    // Mostrar en consola
+    // Mostrar solamente cuando cambie
     //---------------------------------------------------------------------
 
-    m_consoleLogger.Log(command);
+    if (command != m_lastLoggedCommand)
+    {
+        m_consoleLogger.Log(command);
+
+        m_lastLoggedCommand =
+            command;
+    }
 
     //---------------------------------------------------------------------
     // Construir Packet
@@ -83,7 +101,8 @@ void Controller::Update() noexcept
     packet.header.payloadSize =
         sizeof(Protocol::DriverCommand);
 
-    packet.payload = command;
+    packet.payload =
+        command;
 
     //---------------------------------------------------------------------
     // Serializar
@@ -93,11 +112,6 @@ void Controller::Update() noexcept
         Protocol::PacketSize<
             Protocol::DriverCommand>()];
 
-    /*
-    //=============================================================
-    // CÓDIGO ACTUAL
-    //=============================================================
-
     if (!Protocol::PacketSerializer::Serialize(
             packet,
             buffer,
@@ -105,32 +119,12 @@ void Controller::Update() noexcept
     {
         return;
     }
-    */
 
-    //=============================================================
-    // PRUEBA DE DIAGNÓSTICO
-    //=============================================================
-
-    const bool serialized =
-        Protocol::PacketSerializer::Serialize(
-            packet,
-            buffer,
-            sizeof(buffer));
+#if MK_DEBUG_PACKET_SERIALIZER
 
     Serial.println();
     Serial.println("========== PacketSerializer ==========");
 
-    Serial.print("Serialize() : ");
-    Serial.println(serialized ? "SUCCESS" : "FAILED");
-
-    if (!serialized)
-    {
-        Serial.println("PacketSerializer returned FALSE.");
-        Serial.println("Transmission cancelled.");
-        Serial.println("======================================");
-        return;
-    }
-    
     for (std::size_t i = 0; i < sizeof(buffer); ++i)
     {
         if (buffer[i] < 16)
@@ -145,21 +139,15 @@ void Controller::Update() noexcept
     Serial.println();
     Serial.println("======================================");
 
+#endif
+
     //---------------------------------------------------------------------
-    // Enviar mediante ESP-NOW
+    // Enviar ESP-NOW
     //---------------------------------------------------------------------
 
     m_espNowHandler.Send(
         buffer,
         sizeof(buffer));
-
-        const bool sent =
-    m_espNowHandler.Send(
-        buffer,
-        sizeof(buffer));
-
-Serial.print("ESPNow Send(): ");
-Serial.println(sent ? "SUCCESS" : "FAILED");
 }
 
 } // namespace MK

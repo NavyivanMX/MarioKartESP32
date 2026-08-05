@@ -29,10 +29,8 @@ public:
     /// Inicializa todos los dispositivos de entrada.
     void Begin() noexcept;
 
-    /// Actualiza el estado de las entradas.
-    /// Devuelve true únicamente cuando el DriverCommand cambia.
-    [[nodiscard]]
-    bool Update() noexcept;
+    /// Actualiza el estado de las entradas.        
+    void Update() noexcept;
 
     //=========================================================================
     // Acceso

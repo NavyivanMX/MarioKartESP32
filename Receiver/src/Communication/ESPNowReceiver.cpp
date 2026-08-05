@@ -11,6 +11,8 @@
 
 #include <cstring>
 
+#include "src/Config/ReceiverConfig.h"
+
 namespace MK
 {
 
@@ -122,7 +124,25 @@ void ESPNowReceiver::OnReceive(
     const std::uint8_t* data,
     int length)
 {
-    (void)info;
+    //-------------------------------------------------------------
+    // Validar MAC del transmisor
+    //-------------------------------------------------------------
+
+    if (ReceiverConfig::ValidateTransmitterMac)
+    {
+        Types::MacAddress senderMac;
+
+        std::memcpy(
+            senderMac.data(),
+            info->src_addr,
+            senderMac.size());
+
+        if (!ReceiverConfig::IsAuthorizedTransmitter(
+                senderMac))
+        {
+            return;
+        }
+    }
 
     //-------------------------------------------------------------
     // Validar longitud

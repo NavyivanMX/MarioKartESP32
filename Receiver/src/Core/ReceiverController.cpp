@@ -8,7 +8,7 @@
  ******************************************************************************/
 
 #include "ReceiverController.h"
-
+#include "src/Config/ReceiverConfig.h"
 #include "src/Config/BluetoothConfig.h"
 
 namespace MK
@@ -94,7 +94,7 @@ bool ReceiverController::Begin() noexcept
 //=============================================================================
 
 void ReceiverController::Update() noexcept
-{    
+{
     Protocol::DriverCommand command;
 
     //-------------------------------------------------------------
@@ -103,7 +103,9 @@ void ReceiverController::Update() noexcept
 
     if (m_bluetoothManager.Receive(command))
     {
-        ProcessCommand(command);        
+        m_lastCommandTime = millis();
+        m_failsafeActive = false;
+        ProcessCommand(command);
         return;
     }
 
@@ -113,8 +115,28 @@ void ReceiverController::Update() noexcept
 
     if (m_receiver.Receive(command))
     {
-        ProcessCommand(command);        
+        m_lastCommandTime = millis();
+        m_failsafeActive = false;
+        ProcessCommand(command);
         return;
+    }
+
+    //-------------------------------------------------------------
+    // Failsafe
+    //-------------------------------------------------------------
+
+    if (!m_failsafeActive)
+    {
+        if ((millis() - m_lastCommandTime) >
+            ReceiverConfig::CommandTimeoutMs)
+        {
+            m_vehicle.Stop();
+
+            m_failsafeActive = true;
+
+            m_logger.LogWarning(
+                "Communication timeout.");
+        }
     }
 }
 
@@ -122,56 +144,69 @@ void ReceiverController::Update() noexcept
 // Procesamiento
 //=============================================================================
 
+
 void ReceiverController::ProcessCommand(
     const Protocol::DriverCommand& command) noexcept
-{
-       
-    //-------------------------------------------------------------
-    // Cambio de perfil (flanco)
-    //-------------------------------------------------------------
+    {       
+        //-------------------------------------------------------------
+        // Cambio de perfil (flanco)
+        //-------------------------------------------------------------
 
-    const bool gravityPressed =
-        command.driveMode ==
-        Types::Vehicle::DriveMode::Gravity;
+        const bool gravityPressed =
+            command.driveMode ==
+            Types::Vehicle::DriveMode::Gravity;
 
-    if (gravityPressed &&
-        !m_gravityPressedLastFrame)
-    {
-        m_profileManager.Next();
+        if (gravityPressed &&
+            !m_gravityPressedLastFrame)
+        {
+            m_profileManager.Next();
 
-        m_logger.LogProfile(
+            m_logger.LogProfile(
+                m_profileManager.Current());
+        }
+
+        m_gravityPressedLastFrame =
+            gravityPressed;
+
+        //-------------------------------------------------------------
+        // Debug
+        //-------------------------------------------------------------
+
+        bool commandChanged =
+            !m_hasLastCommand ||
+            std::memcmp(
+                &command,
+                &m_lastCommand,
+                sizeof(command)) != 0;
+
+        if (commandChanged)
+        {
+            m_lastCommand = command;
+            m_hasLastCommand = true;
+
+            m_logger.Log(command);
+        }
+
+        //-------------------------------------------------------------
+        // Vehículo
+        //-------------------------------------------------------------
+
+        m_vehicle.Update(
+            command,
             m_profileManager.Current());
+
+        //-------------------------------------------------------------
+        // Siempre informar el perfil actual al Transmitter
+        //-------------------------------------------------------------
+
+        SendVehicleStatus();
+
+        //-------------------------------------------------------------
+        // Limpiar bandera de cambio
+        //-------------------------------------------------------------
+
+        m_profileManager.ClearProfileChanged();
     }
-
-    m_gravityPressedLastFrame =
-        gravityPressed;
-
-    //-------------------------------------------------------------
-    // Debug
-    //-------------------------------------------------------------
-
-    m_logger.Log(command);
-
-    //-------------------------------------------------------------
-    // Vehículo
-    //-------------------------------------------------------------
-
-    m_vehicle.Update(
-        command,
-        m_profileManager.Current());
-
-    //-------------------------------------------------------------
-    // Siempre informar el perfil actual al Transmitter
-    //-------------------------------------------------------------
-
-    SendVehicleStatus();
-
-    //-------------------------------------------------------------
-    // Limpiar bandera de cambio
-    //-------------------------------------------------------------
-
-    m_profileManager.ClearProfileChanged();
-}
     void ReceiverController::SendVehicleStatus()
     {
         Protocol::VehicleStatus status;

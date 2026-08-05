@@ -27,12 +27,7 @@ void InputManager::Begin() noexcept
     BuildDriverCommand();
 }
 
-bool InputManager::Update() noexcept
-{
-    ReadButtons();
 
-    return BuildDriverCommand();
-}
 
 //=============================================================================
 // Acceso
@@ -55,6 +50,13 @@ void InputManager::ReadButtons() noexcept
         {
             button.Update();
         });
+}
+
+void InputManager::Update() noexcept
+{
+    ReadButtons();
+
+    BuildDriverCommand();
 }
 
 bool InputManager::BuildDriverCommand() noexcept

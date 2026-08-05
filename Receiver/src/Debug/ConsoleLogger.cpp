@@ -77,6 +77,13 @@ void ConsoleLogger::LogError(
     Serial.println(message);
 }
 
+void ConsoleLogger::LogWarning(
+    const char* message) const noexcept
+{
+    Serial.print(F("[WARNING] "));
+    Serial.println(message);
+}
+
 //=============================================================================
 // Driving Profile
 //=============================================================================

@@ -24,7 +24,7 @@ public:
     void Update(
         const Protocol::DriverCommand& command,
         const VehicleProfiles::DrivingProfile& profile) noexcept;
-
+    void Stop() noexcept;
 private:
 
     MotorController m_motor;

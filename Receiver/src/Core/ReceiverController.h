@@ -54,6 +54,10 @@ private:
 
 private:
 
+    Protocol::DriverCommand m_lastCommand{};
+
+    bool m_hasLastCommand = false;
+
     void SendVehicleStatus();
     //=========================================================================
     // Debug
@@ -64,7 +68,9 @@ private:
     //=========================================================================
     // Comunicación
     //=========================================================================
+    std::uint32_t m_lastCommandTime{0};
 
+    bool m_failsafeActive{true};
     
     BluetoothManager m_bluetoothManager;
 

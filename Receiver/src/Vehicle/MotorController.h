@@ -46,6 +46,11 @@ public:
     void Drive(
         const Protocol::DriverCommand& command,
         const VehicleProfiles::DrivingProfile& profile) noexcept;
+    //=====================================================================
+    // Control
+    //=====================================================================
+
+    void Stop() noexcept;        
 
 private:
 

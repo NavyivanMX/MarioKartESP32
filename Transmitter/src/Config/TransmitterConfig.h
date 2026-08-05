@@ -14,6 +14,7 @@
 namespace MK::TransmitterConfig
 {
 
+inline constexpr std::uint32_t TransmitPeriodMs = 50;
 inline constexpr bool InputTestMode = false;
 // inline constexpr Types::MacAddress ReceiverMacAddress  =
 // {

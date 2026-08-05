@@ -13,6 +13,7 @@
 #include "src/Communication/ESPNowHandler.h"
 #include "src/Input/InputManager.h"
 #include "src/Debug/ConsoleLogger.h"
+#include "src/Config/TransmitterConfig.h"
 
 //#include <MKShared.h>
 
@@ -37,6 +38,10 @@ public:
     void Update() noexcept;
 
 private:
+
+    std::uint32_t m_lastTransmitTime = 0;
+
+    Protocol::DriverCommand m_lastLoggedCommand{};
 
     InputManager m_inputManager;
 

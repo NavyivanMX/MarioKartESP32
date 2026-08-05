@@ -47,7 +47,9 @@ public:
 
     void LogError(
         const char* message) const noexcept;
-
+    
+    void LogWarning(
+        const char* message) const noexcept;
     //=========================================================================
     // Driving Profile
     //=========================================================================

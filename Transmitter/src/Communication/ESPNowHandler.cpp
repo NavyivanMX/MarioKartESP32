@@ -23,7 +23,7 @@
 // Cambiar a 0 para desactivar todos los mensajes de diagnóstico.
 //=============================================================================
 
-#define ESPNOW_DEBUG 1
+#define ESPNOW_DEBUG 0
 
 namespace
 {
@@ -55,18 +55,6 @@ void OnDataSent(
     esp_now_send_status_t status)
 {
     (void)tx_info;
-    
-
-    if (status == ESP_NOW_SEND_SUCCESS)
-    {
-        Serial.println("ESP_Now SUCCESS");
-    }
-    else
-    {
-        Serial.print("FAILED (");
-        Serial.print(static_cast<int>(status));
-        Serial.println(")");
-    }
 }
 
 } // namespace
@@ -80,8 +68,7 @@ namespace MK
 
 bool ESPNowHandler::Begin()
 {
-    Serial.print("Begin this = ");
-Serial.println(reinterpret_cast<uint32_t>(this), HEX);
+
 #if ESPNOW_DEBUG
 
     Serial.println();
@@ -177,25 +164,16 @@ bool ESPNowHandler::Send(
     const std::uint8_t* packet,
     std::size_t length) noexcept
 {
-    Serial.print("Send this = ");
-    Serial.println(reinterpret_cast<uint32_t>(this), HEX);
-
-    Serial.print("m_initialized = ");
-    Serial.println(m_initialized ? "TRUE" : "FALSE");
-
     if (!IsInitialized())
     {
-        Serial.println("EXIT -> Not initialized");
         return false;
     }
 
-    Serial.print("length = ");
-    Serial.println(length);
+
 
     if ((packet == nullptr) ||
         (length == 0))
     {
-        Serial.println("EXIT -> Invalid packet");
         return false;
     }
 
@@ -227,9 +205,6 @@ bool ESPNowHandler::Send(
             m_peer.peer_addr,
             packet,
             length);
-
-    Serial.print("esp_now_send = ");
-    Serial.println(result);
 
     return IsSuccess(result);
 }
