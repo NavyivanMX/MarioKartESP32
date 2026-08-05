@@ -38,6 +38,7 @@
     <MarioKart.Android.Controls.FloatingButton
 
         android:id="@+id/btnBluetooth"
+        android:elevation="10dp"
 
         android:layout_width="72dp"
 
@@ -317,42 +318,35 @@
     <!--==========================================================-->
 
     <LinearLayout
-
-        android:layout_width="wrap_content"
-
-        android:layout_height="wrap_content"
-
-        android:orientation="horizontal"
-
-        android:gravity="center_vertical"
-
-        android:layout_marginTop="4dp">
-
-      <TextView
-          android:id="@+id/txtCurrentProfile"
-
-          android:layout_width="wrap_content"
-
-          android:layout_height="wrap_content"
-
-          android:text="txtCurrentProfile"
-
-          android:textColor="#FFFFFF"
-
-          android:textStyle="bold"
-
-          android:textSize="20sp"/>
+    android:id="@+id/layoutProfile"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_centerHorizontal="true"
+    android:layout_below="@id/btnBluetooth"
+    android:layout_marginTop="5dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/developer_panel"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp">
 
       <View
-          android:id="@+id/viewTx"
-
-          android:layout_width="12dp"
-
-          android:layout_height="12dp"
-
-          android:layout_marginStart="8dp"
-
+          android:id="@+id/viewProfileIndicator"
+          android:layout_width="16dp"
+          android:layout_height="16dp"
+          android:layout_marginEnd="10dp"
           android:background="@drawable/circle_blue"/>
+
+      <TextView
+          android:id="@+id/txtProfile"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="CONNECTING..."
+          android:textStyle="bold"
+          android:textColor="@android:color/white"
+          android:textSize="14sp"/>
 
     </LinearLayout>
 

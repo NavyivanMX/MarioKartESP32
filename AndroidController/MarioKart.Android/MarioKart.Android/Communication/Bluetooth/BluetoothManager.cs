@@ -52,8 +52,16 @@ namespace MarioKart.Android.Communication.Bluetooth
         // Estado
         //=====================================================================
 
-        public bool IsConnected =>
-            m_transport.IsConnected;
+        public bool IsConnected
+        {
+            get
+            {
+                ConsoleLogger.Log(
+                    $"BluetoothManager.IsConnected = {m_transport.IsConnected}");
+
+                return m_transport.IsConnected;
+            }
+        }
 
         //=====================================================================
         // Recepción
@@ -102,6 +110,24 @@ namespace MarioKart.Android.Communication.Bluetooth
 
             await m_transport.SendAsync(
                 buffer);
+        }
+        //=====================================================================
+        // Desconexión
+        //=====================================================================
+
+        public void Disconnect()
+        {
+            //-------------------------------------------------------------
+            // Detener recepción
+            //-------------------------------------------------------------
+
+            Stop();
+
+            //-------------------------------------------------------------
+            // Cerrar transporte
+            //-------------------------------------------------------------
+
+            m_transport.Disconnect();
         }
 
         //=====================================================================

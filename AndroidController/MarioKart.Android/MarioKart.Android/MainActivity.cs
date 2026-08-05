@@ -67,7 +67,7 @@ namespace MarioKart.Android
         // Comunicación
         //---------------------------------------------------------------------
 
-        private BluetoothManager m_bluetoothManager;
+        //private BluetoothManager m_bluetoothManager;
 
         private BluetoothTransport m_transport;
 
@@ -105,8 +105,10 @@ namespace MarioKart.Android
 
         private TextView m_txtProfileTitle;
         private int m_currentRssi = 0;
+        private bool m_developerPanelVisible = false;
 
         private string m_currentProfile = "Sin asignar";
+        private View m_profileIndicator;
 
         //---------------------------------------------------------------------
         // Activity
@@ -131,13 +133,15 @@ namespace MarioKart.Android
 
             InitializeFloatingButtons();
 
-            UpdateBluetoothState(false);
+            UpdateBluetoothState(m_communication.IsConnected);
 
             if (m_txtCurrentProfile != null)
             {
                 m_txtCurrentProfile.Text =
                     "Sin asignar";
             }
+            ConsoleLogger.Log(
+    $"Bluetooth Button = {(m_btnBluetooth == null ? "NULL" : "OK")}");
         }
 
         //---------------------------------------------------------------------
@@ -174,9 +178,7 @@ namespace MarioKart.Android
                 FindViewById<FloatingButton>(
                     Resource.Id.btnSettings);
 
-            m_viewTx =
-                FindViewById<View>(
-                Resource.Id.viewTx);
+   
 
             m_txtBluetooth =
                 FindViewById<TextView>(
@@ -185,9 +187,12 @@ namespace MarioKart.Android
                 FindViewById<FloatingButton>(
                     Resource.Id.btnProfile);
 
+            m_btnProfile.LongClick +=
+                OnProfileLongClick;
+
             m_txtCurrentProfile =
                 FindViewById<TextView>(
-                    Resource.Id.txtCurrentProfile);
+                    Resource.Id.txtProfile);
 
             m_layoutDeveloper =
                 FindViewById<LinearLayout>(
@@ -204,37 +209,150 @@ namespace MarioKart.Android
             m_txtProfileTitle =
                 FindViewById<TextView>(
                     Resource.Id.txtProfileTitle);
+
+            m_profileIndicator =
+                FindViewById<View>(
+                    Resource.Id.viewProfileIndicator);
+
+       //     m_viewTx =
+       //FindViewById<View>(
+       //Resource.Id.viewTx);
         }
         //---------------------------------------------------------------------
-
-        private async Task AnimateTxAsync()
+        private void UpdateProfileDisplay(
+    DrivingProfile profile)
         {
-            if (m_viewTx == null)
+            switch (profile)
+            {
+                case DrivingProfile.Rookie:
+
+                    m_txtCurrentProfile.Text =
+                        "ROOKIE";
+
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_green);
+
+                    break;
+
+                case DrivingProfile.Normal:
+
+                    m_txtCurrentProfile.Text =
+                        "NORMAL";
+
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_blue);
+
+                    break;
+
+                case DrivingProfile.Advanced:
+
+                    m_txtCurrentProfile.Text =
+                        "ADVANCED";
+
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_orange);
+
+                    break;
+
+                case DrivingProfile.Drift:
+
+                    m_txtCurrentProfile.Text =
+                        "DRIFT";
+
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_purple);
+
+                    break;
+            }
+        }
+        private void UpdateProfileIndicator(
+    DrivingProfile profile)
+        {
+            if (m_profileIndicator == null)
             {
                 return;
             }
 
-            m_viewTx.ScaleX = 0.8f;
-            m_viewTx.ScaleY = 0.8f;
-            m_viewTx.Alpha = 0.0f;
+            switch (profile)
+            {
+                case DrivingProfile.Rookie:
 
-            m_viewTx
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_green);
+
+                    break;
+
+                case DrivingProfile.Normal:
+
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_blue);
+
+                    break;
+
+                case DrivingProfile.Advanced:
+
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_orange);
+
+                    break;
+
+                case DrivingProfile.Drift:
+
+                    m_profileIndicator.SetBackgroundResource(
+                        Resource.Drawable.circle_purple);
+
+                    break;
+            }
+        }
+        private async Task AnimateProfileIndicatorAsync()
+        {
+            if (m_profileIndicator == null)
+            {
+                return;
+            }
+
+            m_profileIndicator
                 .Animate()
-                .Alpha(1.0f)
-                .ScaleX(1.3f)
-                .ScaleY(1.3f)
-                .SetDuration(80)
-                .Start();
+                .ScaleX(1.35f)
+                .ScaleY(1.35f)
+                .SetDuration(120);
 
-            await Task.Delay(80);
+            await Task.Delay(120);
 
-            m_viewTx
+            m_profileIndicator
                 .Animate()
-                .Alpha(0.0f)
-                .ScaleX(0.8f)
-                .ScaleY(0.8f)
-                .SetDuration(180)
-                .Start();
+                .ScaleX(1.0f)
+                .ScaleY(1.0f)
+                .SetDuration(120);
+        }
+        private async Task AnimateTxAsync()
+        {
+            //if (m_viewTx == null)
+            //{
+            //    return;
+            //}
+
+            //m_viewTx.ScaleX = 0.8f;
+            //m_viewTx.ScaleY = 0.8f;
+            //m_viewTx.Alpha = 0.0f;
+
+            //m_viewTx
+            //    .Animate()
+            //    .Alpha(1.0f)
+            //    .ScaleX(1.3f)
+            //    .ScaleY(1.3f)
+            //    .SetDuration(80)
+            //    .Start();
+
+            //await Task.Delay(80);
+
+            //m_viewTx
+            //    .Animate()
+            //    .Alpha(0.0f)
+            //    .ScaleX(0.8f)
+            //    .ScaleY(0.8f)
+            //    .SetDuration(180)
+            //    .Start();
         }
         private void InitializeCommunication()
         {
@@ -256,9 +374,9 @@ namespace MarioKart.Android
                 new BluetoothTransport(
                     m_connection);
 
-            m_bluetoothManager =
-                new BluetoothManager(
-                    m_transport);
+            //m_bluetoothManager =
+            //    new BluetoothManager(
+            //        m_transport);
 
             //-------------------------------------------------------------
             // Communication
@@ -385,6 +503,8 @@ namespace MarioKart.Android
             RegisterBluetoothButton();
 
             RegisterProfileButton();
+
+            RegisterSettingsButton();
         }
         //---------------------------------------------------------------------
         // Bluetooth
@@ -392,13 +512,55 @@ namespace MarioKart.Android
 
         private void RegisterBluetoothButton()
         {
-            m_btnBluetooth.Button.Click += async (sender, e) =>
-            {
-                ToggleDeveloperMode();
-                await ShowBluetoothDialogAsync();
-            };
+            ConsoleLogger.Log("Register Bluetooth Click");
+            m_btnBluetooth.Click +=
+                async (s, e) =>
+                {
+                    ConsoleLogger.Log("ENTRE AL CLICK");
+                    //---------------------------------------------------------
+                    // Ya conectado
+                    //---------------------------------------------------------
+                    ConsoleLogger.Log($"Connected={m_communication.IsConnected}");
+                    if (m_communication.IsConnected)
+                    {
+                        ShowDisconnectDialog();
+                        return;
+                    }
+
+                    //---------------------------------------------------------
+                    // Conectar
+                    //---------------------------------------------------------
+
+                    await ShowBluetoothDialogAsync();
+                };
+        }
+        private void ShowDisconnectDialog()
+        {
+            new AlertDialog.Builder(this)
+
+                .SetTitle("Bluetooth")
+
+                .SetMessage(
+                    "Actualmente estás conectado a Mario Kart RC.\n\n¿Deseas desconectarte?")
+
+                .SetNegativeButton(
+                    "Cancelar",
+                    (s, e) => { })
+
+                .SetPositiveButton(
+                    "Desconectar",
+                    (s, e) =>
+                    {
+                        DisconnectBluetooth();
+                    })
+
+                .Show();
         }
 
+        public void Disconnect()
+        {
+            m_connection.Disconnect();
+        }
         private void RegisterProfileButton()
         {
             m_btnProfile.Button.Click += async (sender, e) =>
@@ -467,55 +629,55 @@ namespace MarioKart.Android
         //---------------------------------------------------------------------
 
        private async Task SendProfileChangeAsync()
-{
-    if (!m_communication.IsConnected)
-    {
-        return;
-    }
+        {
+            if (!m_communication.IsConnected)
+            {
+                return;
+            }
 
-    await AnimateProfileButtonAsync();
+            await AnimateProfileButtonAsync();
 
-    DriverCommand command =
-        m_controller.CurrentCommand;
+            DriverCommand command =
+                m_controller.CurrentCommand;
 
-    //---------------------------------------------------------
-    // Enviar PRESIÓN
-    //---------------------------------------------------------
+            //---------------------------------------------------------
+            // Enviar PRESIÓN
+            //---------------------------------------------------------
 
-    command.DriveMode =
-        DriveMode.Gravity;
+            command.DriveMode =
+                DriveMode.Gravity;
 
-    await m_driverCommandSender.SendAsync(command);
+            await m_driverCommandSender.SendAsync(command);
 
-    m_txPackets++;
+            m_txPackets++;
 
-    UpdateDeveloperPanel();
+            UpdateDeveloperPanel();
 
-    await AnimateTxAsync();
+            await AnimateTxAsync();
 
-    //---------------------------------------------------------
-    // Mantener pulsado un instante
-    //---------------------------------------------------------
+            //---------------------------------------------------------
+            // Mantener pulsado un instante
+            //---------------------------------------------------------
 
-    await Task.Delay(100);
+            await Task.Delay(100);
 
-    //---------------------------------------------------------
-    // Enviar LIBERACIÓN
-    //---------------------------------------------------------
+            //---------------------------------------------------------
+            // Enviar LIBERACIÓN
+            //---------------------------------------------------------
 
-    command.DriveMode =
-        DriveMode.Normal;
+            command.DriveMode =
+                DriveMode.Normal;
 
-    await m_driverCommandSender.SendAsync(command);
+            await m_driverCommandSender.SendAsync(command);
 
-    m_txPackets++;
+            m_txPackets++;
 
-    UpdateDeveloperPanel();
+            UpdateDeveloperPanel();
 
-    await AnimateTxAsync();
+            await AnimateTxAsync();
 
-    StoreLastCommand(command);
-}
+            StoreLastCommand(command);
+        }
         private async Task ConnectBluetoothAsync(
             BluetoothDeviceInfo device)
         {
@@ -615,11 +777,7 @@ namespace MarioKart.Android
             m_btnSettings.Button.Click +=
                 (sender, e) =>
                 {
-                    Toast.MakeText(
-                        this,
-                        "Configuración próximamente.",
-                        ToastLength.Short)
-                        .Show();
+                    ToggleDeveloperPanel();
                 };
         }
         //=====================================================================
@@ -719,10 +877,14 @@ namespace MarioKart.Android
 
                 m_btnTurbo,
 
-                onPressed: () =>
+                onPressed:  () =>
                 {
                     m_controller.State.Turbo =
                         Turbo.Enabled;
+
+                    VibrateTurbo();
+
+                    _= AnimateTurboAsync();
                 },
 
                 onReleased: () =>
@@ -731,7 +893,57 @@ namespace MarioKart.Android
                         Turbo.Disabled;
                 });
         }
+        private void DisconnectBluetooth()
+        {
+            //---------------------------------------------------------
+            // Desconectar Bluetooth
+            //---------------------------------------------------------
 
+            m_communication.Disconnect();
+
+            //---------------------------------------------------------
+            // Estado
+            //---------------------------------------------------------
+
+            m_currentProfile =
+                "NOT CONNECTED";
+
+            //---------------------------------------------------------
+            // Panel Developer
+            //---------------------------------------------------------
+
+            UpdateDeveloperPanel();
+            UpdateBluetoothState(m_communication.IsConnected);
+
+            //---------------------------------------------------------
+            // Botón Bluetooth
+            //---------------------------------------------------------
+
+            if (m_btnBluetooth != null)
+            {
+                m_btnBluetooth.Selected = false;
+            }
+
+            //---------------------------------------------------------
+            // Botón Profile
+            //---------------------------------------------------------
+
+            if (m_btnProfile != null)
+            {
+                m_btnProfile.Enabled = false;
+                m_btnProfile.Alpha = 0.40f;
+            }
+
+            //---------------------------------------------------------
+            // Indicador
+            //---------------------------------------------------------
+
+            if (m_profileIndicator != null)
+            {
+                m_profileIndicator.Visibility =
+                    ViewStates.Invisible;
+            }
+        }
         //---------------------------------------------------------------------
 
         /// <summary>
@@ -843,6 +1055,49 @@ namespace MarioKart.Android
 
                     grantResults);
         }
+        private async Task AnimateTurboAsync()
+{
+    if (m_btnTurbo == null)
+    {
+        return;
+    }
+
+    //---------------------------------------------
+    // Escala
+    //---------------------------------------------
+
+    m_btnTurbo.Animate()
+        .ScaleX(1.18f)
+        .ScaleY(1.18f)
+        .SetDuration(100);
+
+            //---------------------------------------------
+            // Color
+            //---------------------------------------------
+
+            m_btnTurbo.BackgroundTintList =
+                global::Android.Content.Res.ColorStateList.ValueOf(
+                    new global::Android.Graphics.Color(
+                        GetColor(Resource.Color.turboOrange)));
+
+    //---------------------------------------------
+
+    await Task.Delay(100);
+
+    //---------------------------------------------
+    // Regresar
+    //---------------------------------------------
+
+    m_btnTurbo.Animate()
+        .ScaleX(1.0f)
+        .ScaleY(1.0f)
+        .SetDuration(120);
+
+    m_btnTurbo.BackgroundTintList =
+         global::Android.Content.Res.ColorStateList.ValueOf(
+            new global::Android.Graphics.Color(
+                GetColor(Resource.Color.turboYellow)));
+}
         private async Task AnimateProfileAsync(
      string profile)
         {
@@ -1065,6 +1320,59 @@ namespace MarioKart.Android
                 _ => "UNASSIGNED"
             };
         }
+        private void OnProfileLongClick(object sender,View.LongClickEventArgs e)
+        {
+            ToggleDeveloperPanel();
+
+            e.Handled = true;
+        }
+        private void ToggleDeveloperPanel()
+        {
+            if (m_layoutDeveloper == null)
+            {
+                return;
+            }
+
+            m_developerPanelVisible =
+                !m_developerPanelVisible;
+
+            m_layoutDeveloper.Visibility =
+                m_developerPanelVisible
+                    ? ViewStates.Visible
+                    : ViewStates.Gone;
+        }
+
+        private void VibrateTurbo()
+        {
+            try
+            {
+                Vibrator vibrator =
+                    (Vibrator)GetSystemService(
+                        VibratorService);
+
+                if (vibrator == null)
+                {
+                    return;
+                }
+
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+                {
+                    vibrator.Vibrate(
+                        VibrationEffect.CreateOneShot(
+                            150,
+                            VibrationEffect.DefaultAmplitude));
+                }
+                else
+                {
+#pragma warning disable CS0618
+                    vibrator.Vibrate(150);
+#pragma warning restore CS0618
+                }
+            }
+            catch
+            {
+            }
+        }
         private void OnVehicleStatusReceived(object sender, TelemetryEventArgs e)
         {
 
@@ -1084,9 +1392,7 @@ namespace MarioKart.Android
                 //---------------------------------------------------------
                 // Vibración
                 //---------------------------------------------------------
-
-                VibrateFeedback();
-
+              
                 //---------------------------------------------------------
                 // Animación del perfil
                 //---------------------------------------------------------
@@ -1098,10 +1404,14 @@ namespace MarioKart.Android
                 //        .ToString()
                 //        .ToUpperInvariant();
 
-                await AnimateProfileAsync(
-                    m_currentProfile);
+                await AnimateProfileAsync(m_currentProfile);
 
                 UpdateDeveloperPanel();
+                UpdateProfileIndicator(e.VehicleStatus.DrivingProfile);
+
+                UpdateProfileDisplay(e.VehicleStatus.DrivingProfile);
+
+                await AnimateProfileIndicatorAsync();                
 
                 //---------------------------------------------------------
                 // Habilitar botón

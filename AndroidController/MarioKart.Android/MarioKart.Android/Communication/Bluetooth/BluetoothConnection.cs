@@ -42,6 +42,7 @@ namespace MarioKart.Android.Communication.Bluetooth
         // Estado
         //=====================================================================
 
+
         public bool IsConnected =>
             (m_socket != null) &&
             m_socket.IsConnected;

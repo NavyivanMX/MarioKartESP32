@@ -252,7 +252,17 @@ namespace MarioKart.Android.Controls
                 }
                 e.Handled = false;
             };
-            
+            m_button.Click += (s, e) =>
+            {
+                PerformClick();
+            };
+        }
+
+        public override bool PerformClick()
+        {
+            base.PerformClick();
+
+            return true;
         }
     }
 }
