@@ -35,6 +35,8 @@ inline constexpr std::uint8_t Turbo = 26;
 
 inline constexpr std::uint8_t Gravity = 25;
 
+inline constexpr std::uint8_t Haptic = 4;
+
 } // namespace MK::Pins
 
 #endif // MK_PINS_H

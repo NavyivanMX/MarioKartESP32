@@ -29,7 +29,7 @@ const DrivingProfile Profiles[ProfileCount] =
         180,
         180,
         255,
-        0.80f,
+        0.70f,
         false,
         true
     },
@@ -39,7 +39,7 @@ const DrivingProfile Profiles[ProfileCount] =
         220,
         200,
         255,
-        0.90f,
+        0.70f,
         false,
         true
     },

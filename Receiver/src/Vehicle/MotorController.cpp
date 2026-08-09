@@ -56,8 +56,11 @@ void MotorController::Drive(
             forwardPower *
             profile.steeringFactor);
 
-    const std::uint8_t reversePower =
-        profile.reverseSpeed;
+const std::uint8_t reversePower =
+    (command.turbo == Turbo::Enabled &&
+     profile.turboEnabled)
+        ? profile.turboSpeed
+        : profile.reverseSpeed;
 
     const std::uint8_t reverseTurnPower =
         static_cast<std::uint8_t>(

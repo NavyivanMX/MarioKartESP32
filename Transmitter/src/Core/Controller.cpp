@@ -38,7 +38,8 @@ bool Controller::Begin()
             return false;
         }
     }
-
+    pinMode(Pins::Haptic, OUTPUT);
+    digitalWrite(Pins::Haptic,LOW);
     return true;
 }
 
@@ -76,6 +77,26 @@ void Controller::Update() noexcept
     const auto& command =
         m_inputManager.GetDriverCommand();
 
+        using Types::Vehicle::Turbo;
+
+
+static bool lastTurbo = false;
+
+bool turbo =
+    command.turbo == Turbo::Enabled;
+
+if (turbo != lastTurbo)
+{
+    Serial.printf(
+        "Turbo -> %s\n",
+        turbo ? "ON" : "OFF");
+
+    lastTurbo = turbo;
+}
+
+digitalWrite(
+    Pins::Haptic,
+    turbo ? HIGH : LOW);      
     //---------------------------------------------------------------------
     // Mostrar solamente cuando cambie
     //---------------------------------------------------------------------

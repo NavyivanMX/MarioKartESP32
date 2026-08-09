@@ -113,6 +113,9 @@ namespace MarioKart.Android
         private string m_currentProfile = "Sin asignar";
         private View m_profileIndicator;
 
+        private CancellationTokenSource m_turboVibrationCancellation;
+        private Task m_turboVibrationTask;
+
         //---------------------------------------------------------------------
         // Activity
         //---------------------------------------------------------------------
@@ -874,21 +877,24 @@ namespace MarioKart.Android
 
                 m_btnTurbo,
 
-                onPressed:  () =>
+                onPressed: () =>
                 {
                     m_controller.State.Turbo =
                         Turbo.Enabled;
 
-                    VibrateTurbo();
+                    StartTurboVibration();
 
-                    _= AnimateTurboAsync();
+                    _ = AnimateTurboAsync();
                 },
 
                 onReleased: () =>
                 {
                     m_controller.State.Turbo =
                         Turbo.Disabled;
-                });
+
+                    StopTurboVibration();
+                }
+                );
         }
         private void DisconnectBluetooth()
         {
@@ -1397,6 +1403,47 @@ namespace MarioKart.Android
             //    DateTime.Now;
 
             UpdateDeveloperPanel();
+        }
+
+        private void StartTurboVibration()
+        {
+            if (m_turboVibrationTask != null &&
+                !m_turboVibrationTask.IsCompleted)
+            {
+                return;
+            }
+
+            m_turboVibrationCancellation =
+                new CancellationTokenSource();
+
+            m_turboVibrationTask =
+                TurboVibrationLoopAsync(
+                    m_turboVibrationCancellation.Token);
+        }
+        private async Task TurboVibrationLoopAsync(
+    CancellationToken token)
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    VibrateTurbo();
+
+                    await Task.Delay(
+                        120,
+                        token);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }
+
+        private void StopTurboVibration()
+        {
+            m_turboVibrationCancellation?.Cancel();
+
+            m_turboVibrationCancellation = null;
         }
         private void OnVehicleStatusReceived(object sender, TelemetryEventArgs e)
         {

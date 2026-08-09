@@ -35,6 +35,10 @@ inline constexpr std::uint8_t RightMotorIn1 = 33;
 inline constexpr std::uint8_t RightMotorIn2 = 32;
 
 inline constexpr std::uint8_t RightMotorPwm = 14;
+//=============================================================================
+// Estado del turbo
+//=============================================================================
+inline constexpr std::uint8_t Haptic = 4;
 
 
 
