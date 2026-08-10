@@ -20,6 +20,7 @@
 #include <Protocol/Protocol.h>
 
 #include "src/Vehicle/VehicleController.h"
+#include "src/Vehicle/RearLightController.h"
 
 #include "src/Vehicle/VehicleProfiles/DrivingProfileManager.h"
 
@@ -61,7 +62,7 @@ private:
 
     bool m_hasLastCommand = false;
 
-    void SendVehicleStatus();
+    void SendVehicleStatus() noexcept;
     //=========================================================================
     // Debug
     //=========================================================================
@@ -85,6 +86,8 @@ private:
 
     VehicleController m_vehicle;
 
+    RearLightController m_rearLights;
+
     //=========================================================================
     // Driving Profiles
     //=========================================================================
@@ -106,4 +109,4 @@ private:
 
 }
 
-#endif
+#endif  

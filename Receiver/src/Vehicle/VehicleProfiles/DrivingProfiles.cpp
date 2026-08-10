@@ -52,6 +52,16 @@ const DrivingProfile Profiles[ProfileCount] =
         0.35f,
         false,
         true
+    },
+
+    {
+        "Police",
+        180,
+        180,
+        255,
+        0.70f,
+        false,
+        true
     }
 };
 

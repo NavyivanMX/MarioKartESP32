@@ -25,6 +25,8 @@ enum class DrivingProfileId : std::uint8_t
 
     Drift,
 
+    Police,
+
     Count
 };
 

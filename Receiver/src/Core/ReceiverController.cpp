@@ -131,7 +131,7 @@ void ReceiverController::Update() noexcept
             ReceiverConfig::CommandTimeoutMs)
         {
             m_vehicle.Stop();
-
+            m_rearLights.Stop();
             m_failsafeActive = true;
 
             m_logger.LogWarning(
@@ -196,10 +196,9 @@ void ReceiverController::ProcessCommand(
         // Vehículo
         //-------------------------------------------------------------
 
-        m_vehicle.Update(
-            command,
-            m_profileManager.Current());
+        m_vehicle.Update(command,m_profileManager.Current());
 
+        m_rearLights.Update(command,m_profileManager.Current());
         //-------------------------------------------------------------
         // Siempre informar el perfil actual al Transmitter
         //-------------------------------------------------------------
@@ -212,7 +211,7 @@ void ReceiverController::ProcessCommand(
 
         m_profileManager.ClearProfileChanged();
     }
-    void ReceiverController::SendVehicleStatus()
+    void ReceiverController::SendVehicleStatus() noexcept
     {
         Protocol::VehicleStatus status;
 

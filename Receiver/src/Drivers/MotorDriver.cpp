@@ -108,10 +108,7 @@ void MotorDriver::ApplyMotor(
     Types::Vehicle::Direction direction,
     std::uint8_t power) noexcept
 {      
-    Serial.printf(
-    "PWM Pin=%d  Power=%d\n",
-    pwmPin,
-    power);  
+    //Serial.printf("PWM Pin=%d  Power=%d\n",pwmPin,power);  
     switch (direction)
     {
         //-----------------------------------------------------------------
