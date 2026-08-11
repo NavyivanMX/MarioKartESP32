@@ -5,10 +5,15 @@
  *
  * Descripción:
  * Encapsula la inicialización y comunicación mediante ESP-NOW.
+ * Permite enviar DriverCommand y recibir VehicleStatus.
  ******************************************************************************/
 
 #ifndef MK_ESP_NOW_HANDLER_H
 #define MK_ESP_NOW_HANDLER_H
+
+//=============================================================================
+// Includes
+//=============================================================================
 
 #include <cstddef>
 #include <cstdint>
@@ -39,7 +44,7 @@ public:
     void End() noexcept;
 
     //=========================================================================
-    // Comunicación
+    // Comunicación - TX
     //=========================================================================
 
     /// Envía un paquete binario mediante ESP-NOW.
@@ -48,7 +53,26 @@ public:
         const std::uint8_t* packet,
         std::size_t length) noexcept;
 
+    //=========================================================================
+    // Comunicación - RX
+    //=========================================================================
+
+    /**
+     * @brief Intenta recibir un VehicleStatus pendiente.
+     *
+     * @param status Estructura donde se almacenará el estado recibido.
+     *
+     * @return true si se recibió un VehicleStatus válido.
+     */
+    [[nodiscard]]
+    bool ReceiveVehicleStatus(
+        Protocol::VehicleStatus& status) noexcept;
+
 private:
+
+    //=========================================================================
+    // Inicialización
+    //=========================================================================
 
     [[nodiscard]]
     bool InitializeWiFi() noexcept;
@@ -64,9 +88,21 @@ private:
 
 private:
 
+    //=========================================================================
+    // Estado ESP-NOW
+    //=========================================================================
+
     esp_now_peer_info_t m_peer{};
 
     bool m_initialized = false;
+
+    //=========================================================================
+    // RX
+    //=========================================================================
+
+    Protocol::VehicleStatus m_lastVehicleStatus{};
+
+    bool m_vehicleStatusAvailable = false;
 };
 
 } // namespace MK

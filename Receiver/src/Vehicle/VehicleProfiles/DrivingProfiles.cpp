@@ -58,7 +58,7 @@ const DrivingProfile Profiles[ProfileCount] =
         "Police",
         180,
         180,
-        255,
+        230,
         0.70f,
         false,
         true

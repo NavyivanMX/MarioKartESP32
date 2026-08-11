@@ -25,8 +25,21 @@ bool ReceiverController::Begin() noexcept
     //-------------------------------------------------------------
 
     m_logger.Begin();
-
     m_logger.LogBoot();
+    
+    //-------------------------------------------------------------
+    // Rear Lights
+    //-------------------------------------------------------------
+
+    if (!m_rearLights.Begin())
+    {
+        m_logger.LogError(
+            "Rear lights initialization failed.");
+
+        return false;
+    }
+
+
 
     //-------------------------------------------------------------
     // Vehículo
@@ -197,6 +210,9 @@ void ReceiverController::ProcessCommand(
         //-------------------------------------------------------------
 
         m_vehicle.Update(command,m_profileManager.Current());
+
+        Serial.print("Current Profile: ");
+        Serial.println( m_profileManager.Current().name);
 
         m_rearLights.Update(command,m_profileManager.Current());
         //-------------------------------------------------------------

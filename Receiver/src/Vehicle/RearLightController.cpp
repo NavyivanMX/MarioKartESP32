@@ -4,18 +4,10 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Controlador de las luces traseras del Kart.
- *
- * Gestiona:
- * - Animación de inicio.
- * - Cambio de perfil.
- * - Luz blanca durante reversa.
- * - Efecto Turbo.
+ * Implementación del controlador de las luces traseras.
  ******************************************************************************/
 
 #include "RearLightController.h"
-
-#include <Arduino.h>
 
 #include <cstring>
 
@@ -23,81 +15,88 @@ namespace MK
 {
 
 //=============================================================================
-// Constructor
-//=============================================================================
-
-RearLightController::RearLightController()
-    : m_strip(
-          LedCount,
-          LedPin,
-          NEO_GRB + NEO_KHZ800)
-{
-}
-
-//=============================================================================
-// Ciclo de vida
+// Begin
 //=============================================================================
 
 bool RearLightController::Begin() noexcept
 {
-    //---------------------------------------------------------------------
-    // Inicializar NeoPixel
-    //---------------------------------------------------------------------
-
     m_strip.begin();
 
-    m_strip.setBrightness(
-        Brightness);
-
-    //---------------------------------------------------------------------
-    // Estado inicial
-    //---------------------------------------------------------------------
+    m_strip.setBrightness(100);
 
     Clear();
 
-    m_hasLastCommand = false;
+    m_started = true;
 
-    //---------------------------------------------------------------------
-    // Perfil
-    //---------------------------------------------------------------------
-
-    m_lastProfileName = nullptr;
-
-    //---------------------------------------------------------------------
+    //-------------------------------------------------------------------------
     // Startup
-    //---------------------------------------------------------------------
+    //-------------------------------------------------------------------------
 
-    m_startupAnimationActive = true;
-
-    m_startupBlinkCount = 0;
-
+    m_startupActive = true;
     m_startupBlinkOn = false;
+    m_startupBlinkCount = 0;
+    m_startupLastUpdate = millis();
 
-    m_startupBlinkLastUpdate = millis();
-
-    //---------------------------------------------------------------------
+    //-------------------------------------------------------------------------
     // Perfil
-    //---------------------------------------------------------------------
+    //-------------------------------------------------------------------------
 
-    m_profileAnimationActive = false;
-
-    m_profileBlinkCount = 0;
-
+    m_profileEffectActive = false;
     m_profileBlinkOn = false;
+    m_profileBlinkCount = 0;
+    m_profileLastUpdate = millis();
 
-    m_profileBlinkLastUpdate = 0;
-
-    //---------------------------------------------------------------------
+    //-------------------------------------------------------------------------
     // Turbo
-    //---------------------------------------------------------------------
-
-    m_turboActive = false;
-
-    m_turboLastUpdate = 0;
+    //-------------------------------------------------------------------------
 
     m_turboPhase = 0;
+    m_turboLastUpdate = millis();
 
+    //-------------------------------------------------------------------------
+    // Police Turbo
+    //-------------------------------------------------------------------------
+
+    m_policeTurboState = false;
+    m_policeTurboLastUpdate = millis();
+ 
     return true;
+}
+
+//=============================================================================
+// Stop
+//=============================================================================
+
+void RearLightController::Stop() noexcept
+{
+    //-------------------------------------------------------------------------
+    // Turbo
+    //-------------------------------------------------------------------------
+
+    m_turboPhase = 0;
+    m_turboLastUpdate = millis();
+
+    //-------------------------------------------------------------------------
+    // Profile effect
+    //-------------------------------------------------------------------------
+
+    m_profileEffectActive = false;
+    m_profileBlinkOn = false;
+    m_profileBlinkCount = 0;
+    m_profileLastUpdate = millis();
+
+    //-------------------------------------------------------------------------
+    // Police turbo
+    //-------------------------------------------------------------------------
+
+    m_policeTurboState = false;
+    m_policeTurboLastUpdate = millis();
+
+    //-------------------------------------------------------------------------
+    // LEDs OFF
+    //-------------------------------------------------------------------------
+
+    Clear();
 }
 
 //=============================================================================
@@ -108,224 +107,202 @@ void RearLightController::Update(
     const Protocol::DriverCommand& command,
     const VehicleProfiles::DrivingProfile& profile) noexcept
 {
-    using Types::Vehicle::Direction;
-    using Types::Vehicle::Turbo;
 
-    //---------------------------------------------------------------------
+    if (!m_started)
+    {
+        return;
+    }
+    //=========================================================================
     // Detectar cambio de perfil
-    //---------------------------------------------------------------------
+    //=========================================================================
 
     const bool profileChanged =
-        m_lastProfileName == nullptr ||
+        !m_hasLastProfile ||
         std::strcmp(
-            m_lastProfileName,
-            profile.name) != 0;
+            profile.name,
+            m_lastProfileName) != 0;
 
     if (profileChanged)
     {
-        m_lastProfileName =
-            profile.name;
+        m_lastProfileName = profile.name;
+        m_hasLastProfile = true;
 
-        //-----------------------------------------------------------------
-        // Si todavía estamos arrancando, no iniciar otra animación.
-        //-----------------------------------------------------------------
+        //=====================================================================
+        // El startup no genera efecto de cambio
+        //=====================================================================
 
-        if (!m_startupAnimationActive)
+        if (!m_startupActive)
         {
-            StartProfileAnimation(profile);
+            m_profileEffectActive = true;
+
+            m_profileBlinkOn = false;
+            m_profileBlinkCount = 0;
+            m_profileLastUpdate = millis();
+
+            m_policeTurboState = false;
+            m_policeTurboLastUpdate = millis();
         }
     }
 
-    //---------------------------------------------------------------------
-    // Startup
+    //=========================================================================
+    // PRIORIDAD 1
     //
-    // Tiene prioridad al iniciar el sistema.
-    //---------------------------------------------------------------------
+    // REVERSA = BLANCO
+    //=========================================================================
 
-    if (m_startupAnimationActive)
+    if (command.direction ==
+        Types::Vehicle::Direction::Reverse)
     {
-        UpdateStartupAnimation(profile);
+        m_startupActive = false;
+        m_profileEffectActive = false;
 
-        return;
-    }
-
-    //---------------------------------------------------------------------
-    // Turbo
-    //
-    // Turbo tiene prioridad sobre reversa y perfil.
-    //---------------------------------------------------------------------
-
-    const bool turbo =
-        command.turbo == Turbo::Enabled;
-
-    if (turbo)
-    {
-        //-----------------------------------------------------------------
-        // Entrada a Turbo
-        //-----------------------------------------------------------------
-
-        if (!m_turboActive)
-        {
-            m_turboActive = true;
-
-            m_turboPhase = 0;
-
-            m_turboLastUpdate =
-                millis();
-        }
-
-        UpdateTurboEffect();
-
-        return;
-    }
-
-    //---------------------------------------------------------------------
-    // Salida de Turbo
-    //---------------------------------------------------------------------
-
-    if (m_turboActive)
-    {
-        m_turboActive = false;
-
-        m_turboPhase = 0;
-
-        Clear();
-    }
-
-    //---------------------------------------------------------------------
-    // Reversa
-    //---------------------------------------------------------------------
-
-    if (command.direction == Direction::Reverse)
-    {
         SetWhite();
 
         return;
     }
 
-    //---------------------------------------------------------------------
-    // Animación de cambio de perfil
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // PRIORIDAD 2
+    //
+    // STARTUP
+    //=========================================================================
 
-    if (m_profileAnimationActive)
+    if (m_startupActive)
     {
-        UpdateProfileAnimation(profile);
+        UpdateStartupEffect();
 
         return;
     }
 
-    //---------------------------------------------------------------------
-    // Estado normal
+    //=========================================================================
+    // PRIORIDAD 3
     //
-    // Las luces permanecen apagadas.
-    //---------------------------------------------------------------------
+    // CAMBIO DE PERFIL
+    //=========================================================================
+
+    if (m_profileEffectActive)
+    {
+        UpdateProfileEffect(profile);
+
+        return;
+    }
+
+    //=========================================================================
+    // PRIORIDAD 4
+    //
+    // TURBO
+    //=========================================================================
+
+    if (command.turbo ==
+        Types::Vehicle::Turbo::Enabled)
+    {
+        UpdateTurboEffect(profile);
+
+        return;
+    }
+
+    //=========================================================================
+    // ESTADO NORMAL
+    //=========================================================================
 
     Clear();
 }
 
 //=============================================================================
-// Stop
+// Startup Effect
 //=============================================================================
 
-void RearLightController::Stop() noexcept
+void RearLightController::UpdateStartupEffect() noexcept
 {
-    m_turboActive = false;
-
-    m_turboPhase = 0;
-
-    m_startupAnimationActive = false;
-
-    m_profileAnimationActive = false;
-
-    Clear();
-}
-
-//=============================================================================
-// Startup Animation
-//=============================================================================
-
-void RearLightController::StartStartupAnimation() noexcept
-{
-    m_startupAnimationActive = true;
-
-    m_startupBlinkCount = 0;
-
-    m_startupBlinkOn = false;
-
-    m_startupBlinkLastUpdate = millis();
-}
-
-//=============================================================================
-
-void RearLightController::UpdateStartupAnimation(
-    const VehicleProfiles::DrivingProfile& profile) noexcept
-{
-    //---------------------------------------------------------------------
-    // Tiempo entre estados ON/OFF
-    //---------------------------------------------------------------------
-
     constexpr std::uint32_t BlinkIntervalMs = 180;
 
-    const std::uint32_t now =
-        millis();
+    const std::uint32_t now = millis();
 
-    if ((now - m_startupBlinkLastUpdate) <
+    if ((now - m_startupLastUpdate) <
         BlinkIntervalMs)
     {
         return;
     }
 
-    m_startupBlinkLastUpdate = now;
+    m_startupLastUpdate = now;
 
-    //---------------------------------------------------------------------
-    // Cambiar estado
-    //---------------------------------------------------------------------
-
-    m_startupBlinkOn =
-        !m_startupBlinkOn;
-
-    //---------------------------------------------------------------------
+    //=========================================================================
     // Encender
-    //---------------------------------------------------------------------
+    //=========================================================================
 
-    if (m_startupBlinkOn)
+    if (!m_startupBlinkOn)
     {
         std::uint8_t red = 0;
         std::uint8_t green = 0;
         std::uint8_t blue = 0;
 
-        GetProfileColor(
-            profile,
-            red,
-            green,
-            blue);
+        //=====================================================================
+        // Color del perfil
+        //=====================================================================
+
+        if (m_hasLastProfile)
+        {
+            if (std::strcmp(m_lastProfileName,"Rookie") == 0)
+            {
+                red = 0;
+                green = 255;
+                blue = 0;
+            }
+            else if (std::strcmp(m_lastProfileName,"Normal") == 0)
+            {
+                red = 0;
+                green = 0;
+                blue = 255;
+            }
+            else if (std::strcmp(m_lastProfileName,"Advanced") == 0)
+            {
+                red = 255;
+                green = 80;
+                blue = 0;
+            }
+            else if (std::strcmp(m_lastProfileName,"Drift") == 0)
+            {
+                red = 180;
+                green = 0;
+                blue = 255;
+            }
+            else if (std::strcmp(m_lastProfileName,"Police") == 0)
+            {
+                red = 0;
+                green = 0;
+                blue = 255;
+            }
+        }
 
         SetColor(
             red,
             green,
             blue);
 
+        m_startupBlinkOn = true;
+
         return;
     }
 
-    //---------------------------------------------------------------------
+    //=========================================================================
     // Apagar
-    //---------------------------------------------------------------------
+    //=========================================================================
 
     Clear();
 
+    m_startupBlinkOn = false;
+
     ++m_startupBlinkCount;
 
-    //---------------------------------------------------------------------
-    // Dos BLINKS
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // Terminar después de 2 blink
+    //=========================================================================
 
     if (m_startupBlinkCount >= 2)
     {
-        m_startupAnimationActive = false;
+        m_startupActive = false;
 
         m_startupBlinkCount = 0;
-
         m_startupBlinkOn = false;
 
         Clear();
@@ -333,61 +310,44 @@ void RearLightController::UpdateStartupAnimation(
 }
 
 //=============================================================================
-// Profile Animation
+// Profile Effect
 //=============================================================================
 
-void RearLightController::StartProfileAnimation(
+void RearLightController::UpdateProfileEffect(
     const VehicleProfiles::DrivingProfile& profile) noexcept
 {
-    m_profileAnimationActive = true;
+    //=========================================================================
+    // Police
+    //=========================================================================
 
-    m_profileBlinkCount = 0;
+    if (IsPoliceProfile(profile))
+    {
+        UpdatePoliceProfileEffect();
 
-    m_profileBlinkOn = false;
+        return;
+    }
 
-    m_profileBlinkLastUpdate = millis();
-
-    //---------------------------------------------------------------------
-    // Evitar warning por parámetro no utilizado en esta función.
-    //---------------------------------------------------------------------
-
-    (void)profile;
-}
-
-//=============================================================================
-
-void RearLightController::UpdateProfileAnimation(
-    const VehicleProfiles::DrivingProfile& profile) noexcept
-{
-    //---------------------------------------------------------------------
-    // Tiempo entre ON/OFF
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // Perfiles normales
+    //=========================================================================
 
     constexpr std::uint32_t BlinkIntervalMs = 180;
 
-    const std::uint32_t now =
-        millis();
+    const std::uint32_t now = millis();
 
-    if ((now - m_profileBlinkLastUpdate) <
+    if ((now - m_profileLastUpdate) <
         BlinkIntervalMs)
     {
         return;
     }
 
-    m_profileBlinkLastUpdate = now;
+    m_profileLastUpdate = now;
 
-    //---------------------------------------------------------------------
-    // Cambiar estado
-    //---------------------------------------------------------------------
-
-    m_profileBlinkOn =
-        !m_profileBlinkOn;
-
-    //---------------------------------------------------------------------
+    //=========================================================================
     // Encender
-    //---------------------------------------------------------------------
+    //=========================================================================
 
-    if (m_profileBlinkOn)
+    if (!m_profileBlinkOn)
     {
         std::uint8_t red = 0;
         std::uint8_t green = 0;
@@ -404,27 +364,30 @@ void RearLightController::UpdateProfileAnimation(
             green,
             blue);
 
+        m_profileBlinkOn = true;
+
         return;
     }
 
-    //---------------------------------------------------------------------
+    //=========================================================================
     // Apagar
-    //---------------------------------------------------------------------
+    //=========================================================================
 
     Clear();
 
+    m_profileBlinkOn = false;
+
     ++m_profileBlinkCount;
 
-    //---------------------------------------------------------------------
-    // Tres BLINKS
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // Tres blink
+    //=========================================================================
 
     if (m_profileBlinkCount >= 3)
     {
-        m_profileAnimationActive = false;
+        m_profileEffectActive = false;
 
         m_profileBlinkCount = 0;
-
         m_profileBlinkOn = false;
 
         Clear();
@@ -432,19 +395,116 @@ void RearLightController::UpdateProfileAnimation(
 }
 
 //=============================================================================
+// Police Profile Effect
+//=============================================================================
+
+void RearLightController::UpdatePoliceProfileEffect() noexcept
+{
+
+    constexpr std::uint32_t BlinkIntervalMs = 180;
+
+    const std::uint32_t now = millis();
+
+    if ((now - m_profileLastUpdate) <
+        BlinkIntervalMs)
+    {
+        return;
+    }
+
+    m_profileLastUpdate = now;
+
+    //=========================================================================
+    // Apagar después de cada blink
+    //=========================================================================
+
+    if (m_profileBlinkOn)
+    {
+        Clear();
+
+        m_profileBlinkOn = false;
+
+        ++m_profileBlinkCount;
+
+        if (m_profileBlinkCount >= 3)
+        {
+            m_profileEffectActive = false;
+
+            m_profileBlinkCount = 0;
+            m_profileBlinkOn = false;
+
+            Clear();
+        }
+
+        return;
+    }
+
+    //=========================================================================
+    // Azul
+    //=========================================================================
+
+    if ((m_profileBlinkCount % 2) == 0)
+    {
+        SetLedColor(
+            0,
+            0,
+            0,
+            255);
+
+        SetLedColor(
+            1,
+            255,
+            0,
+            0);
+    }
+
+    //=========================================================================
+    // Rojo
+    //=========================================================================
+
+    else
+    {
+        SetLedColor(
+            0,
+            0,
+            0,
+            255);
+
+        SetLedColor(
+            1,
+            255,
+            0,
+            0);
+    }
+
+    m_profileBlinkOn = true;
+}
+
+//=============================================================================
 // Turbo Effect
 //=============================================================================
 
-void RearLightController::UpdateTurboEffect() noexcept
+void RearLightController::UpdateTurboEffect(
+    const VehicleProfiles::DrivingProfile& profile) noexcept
 {
-    //=====================================================================
-    // Velocidad del efecto
-    //=====================================================================
+    //=========================================================================
+    // Police
+    //=========================================================================
+
+    if (IsPoliceProfile(profile))
+    {
+
+        UpdatePoliceTurboEffect();
+
+        return;
+    }
+
+    //=========================================================================
+    // Turbo normal
+    //=========================================================================
 
     constexpr std::uint32_t FrameIntervalMs = 3;
 
-    const std::uint32_t now =
-        millis();
+    const std::uint32_t now = millis();
 
     if ((now - m_turboLastUpdate) <
         FrameIntervalMs)
@@ -454,28 +514,33 @@ void RearLightController::UpdateTurboEffect() noexcept
 
     m_turboLastUpdate = now;
 
-    //=====================================================================
-    // Avanzar fase
-    //=====================================================================
+    //=========================================================================
+    // Avance de fase
+    //
+    // Ajuste realizado:
+    //
+    // m_turboPhase = m_turboPhase + 5;
+    //=========================================================================
 
-    m_turboPhase=m_turboPhase + 5;
+    m_turboPhase =
+        m_turboPhase + 5;
 
     if (m_turboPhase >= 510)
     {
         m_turboPhase = 0;
     }
 
-    //=====================================================================
-    // Calcular color
-    //=====================================================================
+    //=========================================================================
+    // Variables RGB
+    //=========================================================================
 
     std::uint8_t red = 0;
     std::uint8_t green = 0;
     std::uint8_t blue = 0;
 
-    //---------------------------------------------------------------------
-    // Naranja → Rojo
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // Naranja -> Rojo
+    //=========================================================================
 
     if (m_turboPhase < 128)
     {
@@ -493,9 +558,9 @@ void RearLightController::UpdateTurboEffect() noexcept
         blue = 0;
     }
 
-    //---------------------------------------------------------------------
-    // Rojo → Morado
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // Rojo -> Morado
+    //=========================================================================
 
     else if (m_turboPhase < 256)
     {
@@ -514,9 +579,9 @@ void RearLightController::UpdateTurboEffect() noexcept
                 127);
     }
 
-    //---------------------------------------------------------------------
-    // Morado → Azul
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // Morado -> Azul
+    //=========================================================================
 
     else if (m_turboPhase < 384)
     {
@@ -536,9 +601,9 @@ void RearLightController::UpdateTurboEffect() noexcept
         blue = 255;
     }
 
-    //---------------------------------------------------------------------
-    // Azul → Morado → Naranja
-    //---------------------------------------------------------------------
+    //=========================================================================
+    // Azul -> Morado -> Rojo
+    //=========================================================================
 
     else
     {
@@ -565,18 +630,9 @@ void RearLightController::UpdateTurboEffect() noexcept
                 125);
     }
 
-    //=====================================================================
+    //=========================================================================
     // Brillo dinámico
-    //=====================================================================
-    //
-    // El brillo sube y baja durante el ciclo para dar sensación
-    // de llama / energía.
-    //
-    // 0   → brillo mínimo
-    // 255 → brillo máximo
-    //
-    // Usamos una onda triangular para que el efecto sea suave.
-    //=====================================================================
+    //=========================================================================
 
     std::uint16_t brightness = 0;
 
@@ -601,9 +657,9 @@ void RearLightController::UpdateTurboEffect() noexcept
             254;
     }
 
-    //=====================================================================
-    // Aplicar brillo al RGB
-    //=====================================================================
+    //=========================================================================
+    // Aplicar brillo
+    //=========================================================================
 
     red =
         static_cast<std::uint8_t>(
@@ -629,13 +685,203 @@ void RearLightController::UpdateTurboEffect() noexcept
             ) /
             255);
 
-    //=====================================================================
-    // Aplicar a ambos LEDs
-    //=====================================================================
+    //=========================================================================
+    // Ambos LEDs
+    //=========================================================================
 
-    for (std::uint8_t i = 0;
-         i < LedCount;
-         ++i)
+    SetColor(
+        red,
+        green,
+        blue);
+}
+
+//=============================================================================
+// Police Turbo Effect
+//=============================================================================
+
+void RearLightController::UpdatePoliceTurboEffect() noexcept
+{
+
+    constexpr std::uint32_t IntervalMs = 100;
+
+    const std::uint32_t now = millis();
+
+    if ((now - m_policeTurboLastUpdate) <
+        IntervalMs)
+    {
+        return;
+    }
+
+    m_policeTurboLastUpdate = now;
+
+    //=========================================================================
+    // Alternar
+    //=========================================================================
+
+    m_policeTurboState =
+        !m_policeTurboState;
+
+    //=========================================================================
+    // LED 1 = Azul
+    // LED 2 = OFF
+    //=========================================================================
+
+    if (m_policeTurboState)
+    {
+        SetLedColor(
+            0,
+            0,
+            0,
+            255);
+
+        SetLedColor(
+            1,
+            0,
+            0,
+            0);
+    }
+
+    //=========================================================================
+    // LED 1 = OFF
+    // LED 2 = Rojo
+    //=========================================================================
+
+    else
+    {
+        SetLedColor(
+            0,
+            0,
+            0,
+            0);
+
+        SetLedColor(
+            1,
+            255,
+            0,
+            0);
+    }
+}
+
+//=============================================================================
+// Is Police Profile
+//=============================================================================
+
+bool RearLightController::IsPoliceProfile(
+    const VehicleProfiles::DrivingProfile& profile) const noexcept
+{
+
+    return std::strcmp(
+        profile.name,
+        "Police") == 0;
+}
+
+//=============================================================================
+// Get Profile Color
+//=============================================================================
+
+void RearLightController::GetProfileColor(
+    const VehicleProfiles::DrivingProfile& profile,
+    std::uint8_t& red,
+    std::uint8_t& green,
+    std::uint8_t& blue) const noexcept
+{
+    //=========================================================================
+    // Rookie = Verde
+    //=========================================================================
+
+    if (std::strcmp(
+            profile.name,
+            "Rookie") == 0)
+    {
+        red = 0;
+        green = 255;
+        blue = 0;
+
+        return;
+    }
+
+    //=========================================================================
+    // Normal = Azul
+    //=========================================================================
+
+    if (std::strcmp(
+            profile.name,
+            "Normal") == 0)
+    {
+        red = 0;
+        green = 0;
+        blue = 255;
+
+        return;
+    }
+
+    //=========================================================================
+    // Advanced = Naranja
+    //=========================================================================
+
+    if (std::strcmp(
+            profile.name,
+            "Advanced") == 0)
+    {
+        red = 255;
+        green = 80;
+        blue = 0;
+
+        return;
+    }
+
+    //=========================================================================
+    // Drift = Violeta
+    //=========================================================================
+
+    if (std::strcmp(
+            profile.name,
+            "Drift") == 0)
+    {
+        red = 180;
+        green = 0;
+        blue = 255;
+
+        return;
+    }
+
+    //=========================================================================
+    // Police = Azul
+    //
+    // Solo representa el color base durante startup.
+    // El efecto Police utiliza azul/rojo.
+    //=========================================================================
+
+    if (std::strcmp(
+            profile.name,
+            "Police") == 0)
+    {
+        red = 0;
+        green = 0;
+        blue = 255;
+
+        return;
+    }
+
+    //=========================================================================
+    // Fallback
+    //=========================================================================
+
+    red = 0;
+    green = 0;
+    blue = 0;
+}
+
+//=============================================================================
+// Set Color - ambos LEDs
+//=============================================================================
+
+void RearLightController::SetColor(
+    std::uint8_t red,
+    std::uint8_t green,
+    std::uint8_t blue) noexcept
+{
+    for (std::uint8_t i = 0;i < LedCount;++i)
     {
         m_strip.setPixelColor(
             i,
@@ -649,76 +895,28 @@ void RearLightController::UpdateTurboEffect() noexcept
 }
 
 //=============================================================================
-// Profile Color
+// Set LED Color - LED individual
 //=============================================================================
 
-void RearLightController::GetProfileColor(
-    const VehicleProfiles::DrivingProfile& profile,
-    std::uint8_t& red,
-    std::uint8_t& green,
-    std::uint8_t& blue) const noexcept
+void RearLightController::SetLedColor(
+    std::uint8_t index,
+    std::uint8_t red,
+    std::uint8_t green,
+    std::uint8_t blue) noexcept
 {
-    //---------------------------------------------------------------------
-    // Valores por defecto
-    //---------------------------------------------------------------------
-
-    red = 0;
-    green = 0;
-    blue = 0;
-
-    //---------------------------------------------------------------------
-    // Rookie → Verde
-    //---------------------------------------------------------------------
-
-    if (std::strcmp(
-            profile.name,
-            "Rookie") == 0)
+    if (index >= LedCount)
     {
-        green = 255;
-
         return;
     }
 
-    //---------------------------------------------------------------------
-    // Normal → Azul
-    //---------------------------------------------------------------------
+    m_strip.setPixelColor(
+        index,
+        m_strip.Color(
+            red,
+            green,
+            blue));
 
-    if (std::strcmp(
-            profile.name,
-            "Normal") == 0)
-    {
-        blue = 255;
-
-        return;
-    }
-
-    //---------------------------------------------------------------------
-    // Advanced → Naranja
-    //---------------------------------------------------------------------
-
-    if (std::strcmp(
-            profile.name,
-            "Advanced") == 0)
-    {
-        red = 255;
-        green = 80;
-
-        return;
-    }
-
-    //---------------------------------------------------------------------
-    // Drift → Violeta
-    //---------------------------------------------------------------------
-
-    if (std::strcmp(
-            profile.name,
-            "Drift") == 0)
-    {
-        red = 180;
-        blue = 255;
-
-        return;
-    }
+    m_strip.show();
 }
 
 //=============================================================================
@@ -731,30 +929,6 @@ void RearLightController::SetWhite() noexcept
         255,
         255,
         255);
-}
-
-//=============================================================================
-// Color
-//=============================================================================
-
-void RearLightController::SetColor(
-    std::uint8_t red,
-    std::uint8_t green,
-    std::uint8_t blue) noexcept
-{
-    for (std::uint8_t i = 0;
-         i < LedCount;
-         ++i)
-    {
-        m_strip.setPixelColor(
-            i,
-            m_strip.Color(
-                red,
-                green,
-                blue));
-    }
-
-    m_strip.show();
 }
 
 //=============================================================================

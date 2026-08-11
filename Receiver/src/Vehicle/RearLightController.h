@@ -4,15 +4,7 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Controlador de las luces traseras del Kart.
- *
- * Gestiona:
- * - Animación de inicio.
- * - Cambio de perfil.
- * - Luz blanca durante reversa.
- * - Efecto Turbo.
- *
- * En estado normal las luces permanecen apagadas.
+ * Controlador de las luces traseras del kart.
  ******************************************************************************/
 
 #ifndef MK_REAR_LIGHT_CONTROLLER_H
@@ -22,8 +14,7 @@
 // Includes
 //=============================================================================
 
-#include <cstdint>
-
+#include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
 #include <Protocol/Protocol.h>
@@ -33,6 +24,10 @@
 namespace MK
 {
 
+//=============================================================================
+// RearLightController
+//=============================================================================
+
 class RearLightController final
 {
 public:
@@ -40,8 +35,6 @@ public:
     //=========================================================================
     // Ciclo de vida
     //=========================================================================
-
-    RearLightController();
 
     [[nodiscard]]
     bool Begin() noexcept;
@@ -55,12 +48,60 @@ public:
         const VehicleProfiles::DrivingProfile& profile) noexcept;
 
     //=========================================================================
-    // Stop
+    // Control
     //=========================================================================
 
     void Stop() noexcept;
 
 private:
+
+    //=========================================================================
+    // Efectos
+    //=========================================================================
+
+    void UpdateStartupEffect() noexcept;
+
+    void UpdateProfileEffect(
+        const VehicleProfiles::DrivingProfile& profile) noexcept;
+
+    void UpdatePoliceProfileEffect() noexcept;
+
+    void UpdateTurboEffect(
+        const VehicleProfiles::DrivingProfile& profile) noexcept;
+
+    void UpdatePoliceTurboEffect() noexcept;
+
+    //=========================================================================
+    // Perfiles
+    //=========================================================================
+
+    bool IsPoliceProfile(
+        const VehicleProfiles::DrivingProfile& profile) const noexcept;
+
+    void GetProfileColor(
+        const VehicleProfiles::DrivingProfile& profile,
+        std::uint8_t& red,
+        std::uint8_t& green,
+        std::uint8_t& blue) const noexcept;
+
+    //=========================================================================
+    // LEDs
+    //=========================================================================
+
+    void SetColor(
+        std::uint8_t red,
+        std::uint8_t green,
+        std::uint8_t blue) noexcept;
+
+    void SetLedColor(
+        std::uint8_t index,
+        std::uint8_t red,
+        std::uint8_t green,
+        std::uint8_t blue) noexcept;
+
+    void SetWhite() noexcept;
+
+    void Clear() noexcept;
 
     //=========================================================================
     // Hardware
@@ -70,17 +111,17 @@ private:
 
     static constexpr std::uint8_t LedCount = 2;
 
-    static constexpr std::uint8_t Brightness = 100;
-
-    Adafruit_NeoPixel m_strip;
+    Adafruit_NeoPixel m_strip{
+        LedCount,
+        LedPin,
+        NEO_GRB + NEO_KHZ800
+    };
 
     //=========================================================================
     // Estado general
     //=========================================================================
 
-    Protocol::DriverCommand m_lastCommand{};
-
-    bool m_hasLastCommand = false;
+    bool m_started = false;
 
     //=========================================================================
     // Perfil
@@ -88,79 +129,47 @@ private:
 
     const char* m_lastProfileName = nullptr;
 
+    bool m_hasLastProfile = false;
+
     //=========================================================================
     // Startup
     //=========================================================================
 
-    bool m_startupAnimationActive = false;
-
-    std::uint8_t m_startupBlinkCount = 0;
+    bool m_startupActive = true;
 
     bool m_startupBlinkOn = false;
 
-    std::uint32_t m_startupBlinkLastUpdate = 0;
+    std::uint8_t m_startupBlinkCount = 0;
+
+    std::uint32_t m_startupLastUpdate = 0;
 
     //=========================================================================
     // Cambio de perfil
     //=========================================================================
 
-    bool m_profileAnimationActive = false;
-
-    std::uint8_t m_profileBlinkCount = 0;
+    bool m_profileEffectActive = false;
 
     bool m_profileBlinkOn = false;
 
-    std::uint32_t m_profileBlinkLastUpdate = 0;
+    std::uint8_t m_profileBlinkCount = 0;
+
+    std::uint32_t m_profileLastUpdate = 0;
 
     //=========================================================================
-    // Turbo
+    // Turbo normal
     //=========================================================================
-
-    bool m_turboActive = false;
-
-    std::uint32_t m_turboLastUpdate = 0;
 
     std::uint16_t m_turboPhase = 0;
 
-    //=========================================================================
-    // Animaciones
-    //=========================================================================
-
-    void StartStartupAnimation() noexcept;
-
-    void UpdateStartupAnimation(
-        const VehicleProfiles::DrivingProfile& profile) noexcept;
-
-    void StartProfileAnimation(
-        const VehicleProfiles::DrivingProfile& profile) noexcept;
-
-    void UpdateProfileAnimation(
-        const VehicleProfiles::DrivingProfile& profile) noexcept;
-
-    void UpdateTurboEffect() noexcept;
+    std::uint32_t m_turboLastUpdate = 0;
 
     //=========================================================================
-    // Perfil
+    // Turbo Police
     //=========================================================================
 
-    void GetProfileColor(
-        const VehicleProfiles::DrivingProfile& profile,
-        std::uint8_t& red,
-        std::uint8_t& green,
-        std::uint8_t& blue) const noexcept;
+    bool m_policeTurboState = false;
 
-    //=========================================================================
-    // Efectos básicos
-    //=========================================================================
-
-    void SetWhite() noexcept;
-
-    void SetColor(
-        std::uint8_t red,
-        std::uint8_t green,
-        std::uint8_t blue) noexcept;
-
-    void Clear() noexcept;
+    std::uint32_t m_policeTurboLastUpdate = 0;
 };
 
 } // namespace MK
