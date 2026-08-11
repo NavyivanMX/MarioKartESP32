@@ -33,9 +33,7 @@ bool ReceiverController::Begin() noexcept
 
     if (!m_rearLights.Begin())
     {
-        m_logger.LogError(
-            "Rear lights initialization failed.");
-
+        m_logger.LogError("Rear lights initialization failed.");
         return false;
     }
 
@@ -47,9 +45,7 @@ bool ReceiverController::Begin() noexcept
 
     if (!m_vehicle.Begin())
     {
-        m_logger.LogError(
-            "Vehicle initialization failed.");
-
+        m_logger.LogError("Vehicle initialization failed.");
         return false;
     }
 
@@ -60,8 +56,7 @@ bool ReceiverController::Begin() noexcept
     if (!m_bluetoothManager.Begin(
             Config::BluetoothConfig::DeviceName))
     {
-        m_logger.LogError(
-            "Bluetooth initialization failed.");
+        m_logger.LogError("Bluetooth initialization failed.");
 
         return false;
     }
@@ -72,8 +67,7 @@ bool ReceiverController::Begin() noexcept
 
     if (!m_receiver.Begin())
     {
-        m_logger.LogError(
-            "ESP-NOW initialization failed.");
+        m_logger.LogError("ESP-NOW initialization failed.");
 
         return false;
     }
@@ -84,14 +78,12 @@ bool ReceiverController::Begin() noexcept
 
     if (!m_profileManager.Begin())
     {
-        m_logger.LogError(
-            "DrivingProfileManager initialization failed.");
+        m_logger.LogError("DrivingProfileManager initialization failed.");            "DrivingProfileManager initialization failed.");
 
         return false;
     }
 
-    m_logger.LogProfile(
-        m_profileManager.Current());
+    m_logger.LogProfile(m_profileManager.Current());
 
     //-------------------------------------------------------------
     // Sistema listo
@@ -147,8 +139,7 @@ void ReceiverController::Update() noexcept
             m_rearLights.Stop();
             m_failsafeActive = true;
 
-            m_logger.LogWarning(
-                "Communication timeout.");
+            m_logger.LogWarning("Communication timeout.");
         }
     }
 }
@@ -174,8 +165,7 @@ void ReceiverController::ProcessCommand(
         {
             m_profileManager.Next();
 
-            m_logger.LogProfile(
-                m_profileManager.Current());
+            m_logger.LogProfile(m_profileManager.Current());
         }
 
         m_gravityPressedLastFrame =
