@@ -159,24 +159,43 @@ void StatusLightController::Update(
         return;
     }
 
-    //-------------------------------------------------------------------------
-    // Cambio de perfil
-    //-------------------------------------------------------------------------
+ //-------------------------------------------------------------------------
+// Cambio de perfil
+//-------------------------------------------------------------------------
 
-    if (m_profileEffectActive)
+if (m_profileEffectActive)
+{
+    UpdateProfileEffect();
+    return;
+}
+
+//-------------------------------------------------------------------------
+// Reversa
+//-------------------------------------------------------------------------
+
+    const bool reverse =
+        command.direction ==
+        Direction::Reverse;
+    if (reverse)
     {
-        UpdateProfileEffect();
+        m_turboActive = false;
+        m_turboPhase = 0;
+
+        m_policeTurboState = false;
+
+        SetWhite();
+
         return;
     }
 
-    //-------------------------------------------------------------------------
-    // Turbo
-    //-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+// Turbo
+//-------------------------------------------------------------------------
 
-    using Types::Vehicle::Turbo;
+using Types::Vehicle::Turbo;
 
-    const bool turbo =
-        command.turbo == Turbo::Enabled;
+const bool turbo =
+    command.turbo == Turbo::Enabled;
 
     //-------------------------------------------------------------------------
     // Turbo OFF
@@ -191,9 +210,9 @@ void StatusLightController::Update(
             m_turboPhase = 0;
 
             m_policeTurboState = false;
-
-            Clear();
         }
+
+        Clear();
 
         return;
     }
