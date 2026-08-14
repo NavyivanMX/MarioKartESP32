@@ -345,64 +345,201 @@ void StatusLightController::UpdateProfileEffect() noexcept
 
 void StatusLightController::UpdateTurboEffect() noexcept
 {
-    const std::uint32_t now =
-        millis();
+   //=========================================================================
+    // Turbo normal
+    //=========================================================================
+
+    constexpr std::uint32_t FrameIntervalMs = 3;
+
+    const std::uint32_t now = millis();
 
     if ((now - m_turboLastUpdate) <
-        TurboUpdateIntervalMs)
+        FrameIntervalMs)
     {
         return;
     }
 
     m_turboLastUpdate = now;
 
-    m_turboActive = true;
-
-    //---------------------------------------------------------------------
-    // Misma idea de animación turbo del RearLightController.
+    //=========================================================================
+    // Avance de fase
     //
-    // Usamos el perfil actual como color base.
-    //---------------------------------------------------------------------
-
-    std::uint8_t red;
-    std::uint8_t green;
-    std::uint8_t blue;
-
-    GetProfileColor(
-        m_currentProfile,
-        red,
-        green,
-        blue);
-
-    //---------------------------------------------------------------------
-    // Variación de brillo.
-    //---------------------------------------------------------------------
-
-    const std::uint8_t level =
-        static_cast<std::uint8_t>(
-            80 +
-            ((m_turboPhase % 6) * 35));
-
-    const std::uint16_t scaledRed =
-        (static_cast<std::uint16_t>(red) * level) / 255;
-
-    const std::uint16_t scaledGreen =
-        (static_cast<std::uint16_t>(green) * level) / 255;
-
-    const std::uint16_t scaledBlue =
-        (static_cast<std::uint16_t>(blue) * level) / 255;
-
-    SetColor(
-        static_cast<std::uint8_t>(scaledRed),
-        static_cast<std::uint8_t>(scaledGreen),
-        static_cast<std::uint8_t>(scaledBlue));
-
-    //---------------------------------------------------------------------
-    // Avanzar animación.
-    //---------------------------------------------------------------------
+    // Ajuste realizado:
+    //
+    // m_turboPhase = m_turboPhase + 5;
+    //=========================================================================
 
     m_turboPhase =
         m_turboPhase + 5;
+
+    if (m_turboPhase >= 510)
+    {
+        m_turboPhase = 0;
+    }
+
+    //=========================================================================
+    // Variables RGB
+    //=========================================================================
+
+    std::uint8_t red = 0;
+    std::uint8_t green = 0;
+    std::uint8_t blue = 0;
+
+    //=========================================================================
+    // Naranja -> Rojo
+    //=========================================================================
+
+    if (m_turboPhase < 128)
+    {
+        const std::uint8_t greenValue =
+            static_cast<std::uint8_t>(
+                80 -
+                (
+                    static_cast<std::uint16_t>(80) *
+                    m_turboPhase
+                ) /
+                127);
+
+        red = 255;
+        green = greenValue;
+        blue = 0;
+    }
+
+    //=========================================================================
+    // Rojo -> Morado
+    //=========================================================================
+
+    else if (m_turboPhase < 256)
+    {
+        const std::uint16_t phase =
+            m_turboPhase - 128;
+
+        red = 255;
+        green = 0;
+
+        blue =
+            static_cast<std::uint8_t>(
+                (
+                    static_cast<std::uint16_t>(255) *
+                    phase
+                ) /
+                127);
+    }
+
+    //=========================================================================
+    // Morado -> Azul
+    //=========================================================================
+
+    else if (m_turboPhase < 384)
+    {
+        const std::uint16_t phase =
+            m_turboPhase - 256;
+
+        red =
+            static_cast<std::uint8_t>(
+                255 -
+                (
+                    static_cast<std::uint16_t>(255) *
+                    phase
+                ) /
+                127);
+
+        green = 0;
+        blue = 255;
+    }
+
+    //=========================================================================
+    // Azul -> Morado -> Rojo
+    //=========================================================================
+
+    else
+    {
+        const std::uint16_t phase =
+            m_turboPhase - 384;
+
+        red =
+            static_cast<std::uint8_t>(
+                (
+                    static_cast<std::uint16_t>(255) *
+                    phase
+                ) /
+                125);
+
+        green = 0;
+
+        blue =
+            static_cast<std::uint8_t>(
+                255 -
+                (
+                    static_cast<std::uint16_t>(255) *
+                    phase
+                ) /
+                125);
+    }
+
+    //=========================================================================
+    // Brillo dinámico
+    //=========================================================================
+
+    std::uint16_t brightness = 0;
+
+    if (m_turboPhase < 255)
+    {
+        brightness =
+            80 +
+            (
+                static_cast<std::uint16_t>(175) *
+                m_turboPhase
+            ) /
+            254;
+    }
+    else
+    {
+        brightness =
+            255 -
+            (
+                static_cast<std::uint16_t>(175) *
+                (m_turboPhase - 255)
+            ) /
+            254;
+    }
+
+    //=========================================================================
+    // Aplicar brillo
+    //=========================================================================
+
+    red =
+        static_cast<std::uint8_t>(
+            (
+                static_cast<std::uint16_t>(red) *
+                brightness
+            ) /
+            255);
+
+    green =
+        static_cast<std::uint8_t>(
+            (
+                static_cast<std::uint16_t>(green) *
+                brightness
+            ) /
+            255);
+
+    blue =
+        static_cast<std::uint8_t>(
+            (
+                static_cast<std::uint16_t>(blue) *
+                brightness
+            ) /
+            255);
+
+    //=========================================================================
+    // Ambos LEDs
+    //=========================================================================
+
+    SetColor(
+        red,
+        green,
+        blue);
 }
 
 //=============================================================================

@@ -23,6 +23,7 @@ MK::ReceiverController g_receiverController;
 //=============================================================================
 
 void setup()
+
 {
     if (!g_receiverController.Begin())
     {

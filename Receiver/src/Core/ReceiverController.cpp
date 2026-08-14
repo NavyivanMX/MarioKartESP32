@@ -220,6 +220,7 @@ void ReceiverController::ProcessCommand(
         status.drivingProfile =
             m_profileManager.CurrentId();
 
+        m_receiver.SendVehicleStatus(status);
         m_bluetoothManager.Send(status);
     }
 } // namespace MK

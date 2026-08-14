@@ -14,12 +14,14 @@
 // Includes
 //=============================================================================
 
+#include <cstdint>
+
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-#include "src/Config/Pins.h"
-
 #include <MKShared.h>
+
+#include "src/Config/Pins.h"
 
 namespace MK
 {
@@ -40,7 +42,7 @@ public:
     bool Begin() noexcept;
 
     //=========================================================================
-    // Ejecución
+    // Estado
     //=========================================================================
 
     void Update(
@@ -71,14 +73,18 @@ private:
     // Perfil
     //=========================================================================
 
+    void UpdateProfile(
+        VehicleProfiles::DrivingProfileId profile) noexcept;
+
+    [[nodiscard]]
+    bool IsPoliceProfile(
+        VehicleProfiles::DrivingProfileId profile) const noexcept;
+
     void GetProfileColor(
         VehicleProfiles::DrivingProfileId profile,
         std::uint8_t& red,
         std::uint8_t& green,
         std::uint8_t& blue) const noexcept;
-
-    bool IsPoliceProfile(
-        VehicleProfiles::DrivingProfileId profile) const noexcept;
 
     //=========================================================================
     // LED
@@ -93,17 +99,17 @@ private:
 
     void Clear() noexcept;
 
-    //=============================================================================
+    //=========================================================================
     // Hardware
-    //=============================================================================
+    //=========================================================================
 
-        static constexpr std::uint8_t LedCount = 1;
+    static constexpr std::uint8_t LedCount = 1;
 
-        Adafruit_NeoPixel m_strip{
-            LedCount,
-            Pins::StatusLed,
-            NEO_GRB + NEO_KHZ800
-        };    
+    Adafruit_NeoPixel m_strip{
+        LedCount,
+        Pins::StatusLed,
+        NEO_GRB + NEO_KHZ800
+    };
 
     //=========================================================================
     // Estado general
@@ -166,7 +172,6 @@ private:
     bool m_policeTurboState = false;
 
     std::uint32_t m_policeTurboLastUpdate = 0;
-    
 };
 
 } // namespace MK

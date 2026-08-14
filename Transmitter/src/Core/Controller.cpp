@@ -83,7 +83,7 @@ bool Controller::Begin()
 
     m_vehicleStatus = {};
 
-    m_hasVehicleStatus = false;
+    m_hasVehicleStatus = true;
 
     return true;
 }
@@ -121,12 +121,18 @@ void Controller::Update() noexcept
     //   2. DriverCommand local para conocer Turbo.
     //---------------------------------------------------------------------
 
-    if (m_hasVehicleStatus)
-    {
-        m_statusLightController.Update(
-            command,
-            m_vehicleStatus.drivingProfile);
-    }
+    // if (m_hasVehicleStatus)
+    // {
+    //     m_statusLightController.Update(
+    //         command,
+    //         m_vehicleStatus.drivingProfile);
+    // }
+
+    m_statusLightController.Update(
+    command,
+    m_hasVehicleStatus
+        ? m_vehicleStatus.drivingProfile
+        : VehicleProfiles::DrivingProfileId::Rookie);
 
     //---------------------------------------------------------------------
     // ¿Es momento de transmitir?
