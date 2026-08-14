@@ -11,6 +11,7 @@
 #define MK_PINS_H
 
 #include <cstdint>
+#include "src/Config/Pins.h"
 
 namespace MK::Pins
 {
@@ -36,6 +37,11 @@ inline constexpr std::uint8_t Turbo = 26;
 inline constexpr std::uint8_t Gravity = 25;
 
 inline constexpr std::uint8_t Haptic = 4;
+
+//=============================================================================
+// Luces led
+//=============================================================================
+inline constexpr std::uint8_t StatusLed = 5;
 
 } // namespace MK::Pins
 

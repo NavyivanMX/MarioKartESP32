@@ -14,7 +14,7 @@
 // Includes
 //=============================================================================
 
-#include "DrivingProfileId.h"
+#include <MKShared.h>
 
 namespace MK::VehicleProfiles
 {

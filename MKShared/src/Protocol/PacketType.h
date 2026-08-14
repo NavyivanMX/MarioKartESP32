@@ -4,11 +4,12 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Identificadores de los paquetes soportados por el protocolo Bluetooth.
+ * Identificadores de los paquetes soportados por el protocolo
+ * de comunicación de MarioKart ESP32 RC.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_PACKETTYPE_H
-#define MK_RECEIVER_PACKETTYPE_H
+#ifndef MK_SHARED_PACKETTYPE_H
+#define MK_SHARED_PACKETTYPE_H
 
 //=============================================================================
 // Includes
@@ -25,23 +26,25 @@ namespace MK::Protocol
 
 enum class PacketType : std::uint8_t
 {
-    //---------------------------------------------------------------------
-    // Android -> Receiver
-    //---------------------------------------------------------------------
+    //------------------------------------------------------------------------
+    // Transmitter / Android -> Receiver
+    //------------------------------------------------------------------------
 
     DriverCommand = 0x01,
 
-    //---------------------------------------------------------------------
-    // Receiver -> Android
-    //---------------------------------------------------------------------
+    //------------------------------------------------------------------------
+    // Receiver -> Transmitter / Android
+    //------------------------------------------------------------------------
 
     VehicleStatus = 0x02,
-    //---------------------------------------------------------------------
-    // Android -> Receiver
-    //---------------------------------------------------------------------
+
+    //------------------------------------------------------------------------
+    // Transmitter / Android -> Receiver
+    //------------------------------------------------------------------------
+
     RequestVehicleStatus = 0x03
 };
 
 } // namespace MK::Protocol
 
-#endif // MK_RECEIVER_PACKETTYPE_H
+#endif // MK_SHARED_PACKETTYPE_H

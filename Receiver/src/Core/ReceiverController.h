@@ -1,6 +1,10 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : ReceiverController.h
+ * Autor    : Narciso Ivan Cisneros Acosta
+ *
+ * Descripción:
+ * Controlador principal del Receiver.
  ******************************************************************************/
 
 #ifndef MK_RECEIVER_CONTROLLER_H
@@ -53,29 +57,31 @@ private:
     void ProcessCommand(
         const Protocol::DriverCommand& command) noexcept;
 
-private:
-
-    Protocol::DriverCommand m_lastLoggedCommand{};
-    bool m_firstLog = true;
-
-    Protocol::DriverCommand m_lastCommand{};
-
-    bool m_hasLastCommand = false;
+    //=========================================================================
+    // Estado del vehículo
+    //=========================================================================
 
     void SendVehicleStatus() noexcept;
+
+private:
+
     //=========================================================================
     // Debug
     //=========================================================================
 
     ConsoleLogger m_logger;
 
+    Protocol::DriverCommand m_lastLoggedCommand{};
+    bool m_firstLog = true;
+
     //=========================================================================
     // Comunicación
     //=========================================================================
+
     std::uint32_t m_lastCommandTime{0};
 
     bool m_failsafeActive{true};
-    
+
     BluetoothManager m_bluetoothManager;
 
     ESPNowReceiver m_receiver;
@@ -102,11 +108,14 @@ private:
     bool m_gravityPressedLastFrame{false};
 
     //=========================================================================
-    // Buffers
+    // Último comando
     //=========================================================================
 
+    Protocol::DriverCommand m_lastCommand{};
+
+    bool m_hasLastCommand{false};
 };
 
-}
+} // namespace MK
 
-#endif  
+#endif // MK_RECEIVER_CONTROLLER_H

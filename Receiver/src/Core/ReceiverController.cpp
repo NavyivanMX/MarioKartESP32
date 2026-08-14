@@ -53,11 +53,9 @@ bool ReceiverController::Begin() noexcept
     // Bluetooth
     //-------------------------------------------------------------
 
-    if (!m_bluetoothManager.Begin(
-            Config::BluetoothConfig::DeviceName))
+    if (!m_bluetoothManager.Begin(Config::BluetoothConfig::DeviceName))
     {
         m_logger.LogError("Bluetooth initialization failed.");
-
         return false;
     }
 
@@ -68,7 +66,6 @@ bool ReceiverController::Begin() noexcept
     if (!m_receiver.Begin())
     {
         m_logger.LogError("ESP-NOW initialization failed.");
-
         return false;
     }
 
@@ -78,8 +75,7 @@ bool ReceiverController::Begin() noexcept
 
     if (!m_profileManager.Begin())
     {
-        m_logger.LogError("DrivingProfileManager initialization failed.");            "DrivingProfileManager initialization failed.");
-
+        m_logger.LogError("DrivingProfileManager initialization failed.");          
         return false;
     }
 

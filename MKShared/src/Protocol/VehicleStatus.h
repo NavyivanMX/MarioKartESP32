@@ -7,8 +7,8 @@
  * Estado actual del vehículo enviado desde el Receiver hacia Android.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_VEHICLESTATUS_H
-#define MK_RECEIVER_VEHICLESTATUS_H
+#ifndef MK_SHARED_VEHICLE_STATUS_H
+#define MK_SHARED_VEHICLE_STATUS_H
 
 //=============================================================================
 // Includes
@@ -16,7 +16,8 @@
 
 #include <cstdint>
 
-#include "src/Vehicle/VehicleProfiles/DrivingProfileId.h"
+
+#include "Vehicle/VehicleProfiles/DrivingProfileId.h"
 
 namespace MK::Protocol
 {
@@ -34,6 +35,7 @@ struct VehicleStatus
     VehicleProfiles::DrivingProfileId drivingProfile;
 };
 
+
 } // namespace MK::Protocol
 
-#endif // MK_RECEIVER_VEHICLESTATUS_H
+#endif // MK_SHARED_VEHICLE_STATUS_H

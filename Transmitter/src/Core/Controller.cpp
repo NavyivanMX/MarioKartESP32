@@ -22,11 +22,35 @@ namespace MK
 
 bool Controller::Begin()
 {
+    //-------------------------------------------------------------------------
+    // Logger
+    //-------------------------------------------------------------------------
+
     m_consoleLogger.Begin();
 
     m_consoleLogger.LogBoot();
 
+    //-------------------------------------------------------------------------
+    // Input
+    //-------------------------------------------------------------------------
+
     m_inputManager.Begin();
+
+    //-------------------------------------------------------------------------
+    // Status Light
+    //-------------------------------------------------------------------------
+
+    if (!m_statusLightController.Begin())
+    {
+        m_consoleLogger.LogError(
+            "Status light initialization failed.");
+
+        return false;
+    }
+
+    //-------------------------------------------------------------------------
+    // ESP-NOW
+    //-------------------------------------------------------------------------
 
     if constexpr (!TransmitterConfig::InputTestMode)
     {
@@ -38,8 +62,29 @@ bool Controller::Begin()
             return false;
         }
     }
-    pinMode(Pins::Haptic, OUTPUT);
-    digitalWrite(Pins::Haptic,LOW);
+
+    //-------------------------------------------------------------------------
+    // Haptic
+    //-------------------------------------------------------------------------
+
+    pinMode(
+        Pins::Haptic,
+        OUTPUT);
+
+    digitalWrite(
+        Pins::Haptic,
+        LOW);
+
+    //-------------------------------------------------------------------------
+    // Estado inicial
+    //-------------------------------------------------------------------------
+
+    m_lastTransmitTime = millis();
+
+    m_vehicleStatus = {};
+
+    m_hasVehicleStatus = false;
+
     return true;
 }
 
@@ -54,6 +99,34 @@ void Controller::Update() noexcept
     //---------------------------------------------------------------------
 
     m_inputManager.Update();
+
+    const auto& command =
+        m_inputManager.GetDriverCommand();
+
+    //---------------------------------------------------------------------
+    // Actualizar estado del vehículo
+    //---------------------------------------------------------------------
+
+    if constexpr (!TransmitterConfig::InputTestMode)
+    {
+        UpdateVehicleStatus();
+    }
+
+    //---------------------------------------------------------------------
+    // Actualizar luz de estado
+    //
+    // La luz necesita:
+    //
+    //   1. Perfil real del kart.
+    //   2. DriverCommand local para conocer Turbo.
+    //---------------------------------------------------------------------
+
+    if (m_hasVehicleStatus)
+    {
+        m_statusLightController.Update(
+            command,
+            m_vehicleStatus.drivingProfile);
+    }
 
     //---------------------------------------------------------------------
     // ¿Es momento de transmitir?
@@ -71,32 +144,33 @@ void Controller::Update() noexcept
     m_lastTransmitTime = now;
 
     //---------------------------------------------------------------------
-    // Obtener comando actual
+    // Debug Turbo
     //---------------------------------------------------------------------
 
-    const auto& command =
-        m_inputManager.GetDriverCommand();
+    using Types::Vehicle::Turbo;
 
-        using Types::Vehicle::Turbo;
+    static bool lastTurbo = false;
 
+    const bool turbo =
+        command.turbo == Turbo::Enabled;
 
-static bool lastTurbo = false;
+    if (turbo != lastTurbo)
+    {
+        Serial.printf(
+            "Turbo -> %s\n",
+            turbo ? "ON" : "OFF");
 
-bool turbo =
-    command.turbo == Turbo::Enabled;
+        lastTurbo = turbo;
+    }
 
-if (turbo != lastTurbo)
-{
-    Serial.printf(
-        "Turbo -> %s\n",
-        turbo ? "ON" : "OFF");
+    //---------------------------------------------------------------------
+    // Haptic
+    //---------------------------------------------------------------------
 
-    lastTurbo = turbo;
-}
+    digitalWrite(
+        Pins::Haptic,
+        turbo ? HIGH : LOW);
 
-digitalWrite(
-    Pins::Haptic,
-    turbo ? HIGH : LOW);      
     //---------------------------------------------------------------------
     // Mostrar solamente cuando cambie
     //---------------------------------------------------------------------
@@ -144,21 +218,29 @@ digitalWrite(
 #if MK_DEBUG_PACKET_SERIALIZER
 
     Serial.println();
-    Serial.println("========== PacketSerializer ==========");
+    Serial.println(
+        "========== PacketSerializer ==========");
 
-    for (std::size_t i = 0; i < sizeof(buffer); ++i)
+    for (std::size_t i = 0;
+         i < sizeof(buffer);
+         ++i)
     {
         if (buffer[i] < 16)
         {
             Serial.print('0');
         }
 
-        Serial.print(buffer[i], HEX);
+        Serial.print(
+            buffer[i],
+            HEX);
+
         Serial.print(' ');
     }
 
     Serial.println();
-    Serial.println("======================================");
+
+    Serial.println(
+        "======================================");
 
 #endif
 
@@ -169,6 +251,42 @@ digitalWrite(
     m_espNowHandler.Send(
         buffer,
         sizeof(buffer));
+}
+
+//=============================================================================
+// VehicleStatus
+//=============================================================================
+
+void Controller::UpdateVehicleStatus() noexcept
+{
+    Protocol::VehicleStatus status{};
+
+    if (!m_espNowHandler.ReceiveVehicleStatus(
+            status))
+    {
+        return;
+    }
+
+    //---------------------------------------------------------------------
+    // Guardar estado recibido
+    //---------------------------------------------------------------------
+
+    m_vehicleStatus =
+        status;
+
+    m_hasVehicleStatus =
+        true;
+
+    //---------------------------------------------------------------------
+    // Debug
+    //---------------------------------------------------------------------
+
+    Serial.print(
+        "VehicleStatus -> Profile: ");
+
+    Serial.println(
+        static_cast<std::uint8_t>(
+            m_vehicleStatus.drivingProfile));
 }
 
 } // namespace MK

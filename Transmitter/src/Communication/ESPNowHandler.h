@@ -26,6 +26,10 @@
 namespace MK
 {
 
+//=============================================================================
+// ESPNowHandler
+//=============================================================================
+
 class ESPNowHandler final
 {
 public:
@@ -47,7 +51,9 @@ public:
     // Comunicación - TX
     //=========================================================================
 
-    /// Envía un paquete binario mediante ESP-NOW.
+    /**
+     * @brief Envía un paquete binario mediante ESP-NOW.
+     */
     [[nodiscard]]
     bool Send(
         const std::uint8_t* packet,
@@ -58,17 +64,26 @@ public:
     //=========================================================================
 
     /**
-     * @brief Intenta recibir un VehicleStatus pendiente.
+     * @brief Intenta obtener el último VehicleStatus recibido.
      *
-     * @param status Estructura donde se almacenará el estado recibido.
+     * @param status Estructura donde se almacenará el estado.
      *
-     * @return true si se recibió un VehicleStatus válido.
+     * @return true si existe un estado nuevo disponible.
      */
     [[nodiscard]]
     bool ReceiveVehicleStatus(
         Protocol::VehicleStatus& status) noexcept;
 
 private:
+
+    //=========================================================================
+    // Callback ESP-NOW
+    //=========================================================================
+
+    static void OnDataReceive(
+        const esp_now_recv_info_t* info,
+        const std::uint8_t* data,
+        int length) noexcept;
 
     //=========================================================================
     // Inicialización
@@ -97,12 +112,18 @@ private:
     bool m_initialized = false;
 
     //=========================================================================
-    // RX
+    // Estado recibido
     //=========================================================================
 
     Protocol::VehicleStatus m_lastVehicleStatus{};
 
     bool m_vehicleStatusAvailable = false;
+
+    //=========================================================================
+    // Instancia activa
+    //=========================================================================
+
+    static ESPNowHandler* s_instance;
 };
 
 } // namespace MK

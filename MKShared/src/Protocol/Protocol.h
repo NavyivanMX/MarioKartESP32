@@ -24,6 +24,7 @@
 #include "Types/Vehicle/Turbo.h"
 
 #include "DriverCommand.h"
+#include "VehicleStatus.h"
 
 #include "Packet.h"
 #include "PacketType.h"

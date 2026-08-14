@@ -17,7 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "VehicleStatus.h"
+#include <MKShared.h>
 
 namespace MK::Protocol
 {

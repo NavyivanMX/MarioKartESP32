@@ -7,8 +7,8 @@
  * Identificadores de los perfiles de conducción.
  ******************************************************************************/
 
-#ifndef MK_RECEIVER_DRIVINGPROFILEID_H
-#define MK_RECEIVER_DRIVINGPROFILEID_H
+#ifndef MK_SHARED_DRIVINGPROFILEID_H
+#define MK_SHARED_DRIVINGPROFILEID_H
 
 #include <cstdint>
 
@@ -32,4 +32,4 @@ enum class DrivingProfileId : std::uint8_t
 
 } // namespace MK::VehicleProfiles
 
-#endif // MK_RECEIVER_DRIVINGPROFILEID_H
+#endif // MK_SHARED_DRIVINGPROFILEID_H
