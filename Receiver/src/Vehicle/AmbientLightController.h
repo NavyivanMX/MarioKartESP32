@@ -1,61 +1,47 @@
 /******************************************************************************
- * Proyecto : MarioKart ESP32 RC
- * Archivo  : AmbientLightController.h
- *
- * Ambiente:
- *   4 x WS2812B
- *   GPIO 19
- *
- * Modo NORMAL:
- *   Al cambiar de perfil:
- *   1. Color correspondiente al perfil.
- *   2. Mantiene el color durante 10 segundos.
- *   3. Entra en Rainbow Shift continuo.
- *
- * Modo WTF:
- *   Se activa/desactiva mediante Perfil + Turbo durante 2 segundos.
- *
- *   Perfil + Adelante/Atrás:
- *       Cambia COLOR.
- *
- *       Colores:
- *         - Azul
- *         - Azul claro
- *         - Blanco
- *         - Rojo
- *         - Naranja
- *         - Amarillo
- *         - Verde
- *         - Morado
- *         - Policía
- *         - Apagado
- *
- *   Perfil + Derecha/Izquierda:
- *       Cambia EFECTO.
- *
- *       Efectos:
- *         - Fijo
- *         - Fade parejo
- *         - Fade secuencial
- *         - Fade alterno
- *         - Blink rápido
- *         - Blink lento
- *         - Pulse
- *
- *   Apagado:
- *       No utiliza ningún efecto.
- *
- * El controlador es NO BLOQUEANTE:
- *   no utiliza delay() en sus efectos.
- ******************************************************************************/
+
+* Proyecto : MarioKart ESP32 RC
+* Archivo  : AmbientLightController.h
+* Autor    : Narciso Ivan Cisneros Acosta
+*
+* Descripción:
+* Controlador de iluminación ambiental del vehículo.
+*
+* Modo normal:
+* * Muestra el color correspondiente al perfil de conducción.
+* * Después de 10 segundos inicia el efecto Rainbow.
+*
+* Modo WTF:
+* * Permite seleccionar manualmente color y efecto.
+* * La última configuración WTF se conserva al salir del modo.
+* * Al volver a entrar se recupera la configuración anterior.
+*
+* Colores:
+* 
+    Blue / Cyan / White / Red / Orange / Yellow
+  
+* 
+    Green / Purple / Police / Rainbow / Off
+  
+*
+* Efectos:
+* 
+    Solid / Fade / SequentialFade / AlternateFade
+  
+* 
+    FastBlink / SlowBlink / Pulse
+  
+*
+
+******************************************************************************/
 
 #ifndef MK_AMBIENT_LIGHT_CONTROLLER_H
 #define MK_AMBIENT_LIGHT_CONTROLLER_H
 
-#include <Arduino.h>
+#include <cstdint>
 #include <Adafruit_NeoPixel.h>
 
-#include <Vehicle/VehicleProfiles/DrivingProfileId.h>
+#include "src/Vehicle/VehicleProfiles/DrivingProfileManager.h"
 
 namespace MK
 {
@@ -64,275 +50,231 @@ class AmbientLightController final
 {
 public:
 
-    //=====================================================================
-    // Enumeraciones
-    //=====================================================================
 
-    enum class AmbientColor : std::uint8_t
-    {
-        Blue = 0,
-        Cyan,
-        White,
-        Red,
-        Orange,
-        Yellow,
-        Green,
-        Purple,
+enum class AmbientColor : std::uint8_t
+{
+    Blue = 0,
+    Cyan,
+    White,
+    Red,
+    Orange,
+    Yellow,
+    Green,
+    Purple,
+    Police,
+    Rainbow,
+    Off,
+    Count
+};
 
-        Police,
-        Off,
+enum class AmbientEffect : std::uint8_t
+{
+    Solid = 0,
+    Fade,
+    SequentialFade,
+    AlternateFade,
+    FastBlink,
+    SlowBlink,
+    Pulse,
+    Count
+};
 
-        Count
-    };
 
-    enum class AmbientEffect : std::uint8_t
-    {
-        Solid = 0,
-        Fade,
-        SequentialFade,
-        AlternateFade,
-        FastBlink,
-        SlowBlink,
-        Pulse,
+public:
 
-        Count
-    };
 
-    //=====================================================================
-    // Inicialización / actualización
-    //=====================================================================
+bool Begin() noexcept;
 
-    bool Begin() noexcept;
+void Update() noexcept;
 
-    void Update() noexcept;
+void SetProfile(
+    VehicleProfiles::DrivingProfileId profile) noexcept;
 
-    //=====================================================================
-    // Modo NORMAL
-    //=====================================================================
+void ToggleWtfMode() noexcept;
 
-    // Inicia/reinicia la secuencia del ambiente para el perfil indicado.
-    //
-    // Perfil
-    //   ↓
-    // Color del perfil
-    //   ↓
-    // 10 segundos
-    //   ↓
-    // Rainbow
-    //
-    void SetProfile(
-        VehicleProfiles::DrivingProfileId profile) noexcept;
+[[nodiscard]]
+bool IsWtfMode() const noexcept;
 
-    //=====================================================================
-    // Modo WTF
-    //=====================================================================
+void NextColor() noexcept;
+void PreviousColor() noexcept;
 
-    // Activa/desactiva el modo WTF.
-    void ToggleWtfMode() noexcept;
+void NextEffect() noexcept;
+void PreviousEffect() noexcept;
 
-    [[nodiscard]]
-    bool IsWtfMode() const noexcept;
+[[nodiscard]]
+AmbientColor CurrentColor() const noexcept;
 
-    //=====================================================================
-    // Selección WTF - COLOR
-    //=====================================================================
+[[nodiscard]]
+AmbientEffect CurrentEffect() const noexcept;
 
-    // Selecciona el siguiente color.
-    //
-    // Blue -> Cyan -> White -> ... -> Police -> Off -> Blue
-    //
-    void NextColor() noexcept;
+void Off() noexcept;
 
-    // Selecciona el color anterior.
-    void PreviousColor() noexcept;
+void SetEnabled(bool enabled) noexcept;
 
-    //=====================================================================
-    // Selección WTF - EFECTO
-    //=====================================================================
+[[nodiscard]]
+bool IsEnabled() const noexcept;
 
-    // Selecciona el siguiente efecto.
-    //
-    // Solid -> Fade -> SequentialFade -> ... -> Pulse -> Solid
-    //
-    void NextEffect() noexcept;
-
-    // Selecciona el efecto anterior.
-    void PreviousEffect() noexcept;
-
-    //=====================================================================
-    // Estado
-    //=====================================================================
-
-    [[nodiscard]]
-    AmbientColor CurrentColor() const noexcept;
-
-    [[nodiscard]]
-    AmbientEffect CurrentEffect() const noexcept;
-
-    //=====================================================================
-    // ON / OFF
-    //=====================================================================
-
-    // Desactiva completamente el ambiente.
-    void Off() noexcept;
-
-    //=====================================================================
-    // Configuración general
-    //=====================================================================
-
-    void SetEnabled(bool enabled) noexcept;
-
-    [[nodiscard]]
-    bool IsEnabled() const noexcept;
 
 private:
 
-    //=====================================================================
-    // Hardware
-    //=====================================================================
 
-    static constexpr std::uint8_t LedPin = 19;
+void UpdateNormalMode() noexcept;
+void UpdateWtfMode() noexcept;
 
-    static constexpr std::uint8_t LedCount = 4;
+void UpdateSolid() noexcept;
+void UpdateFade() noexcept;
+void UpdateSequentialFade() noexcept;
+void UpdateAlternateFade() noexcept;
+void UpdateFastBlink() noexcept;
+void UpdateSlowBlink() noexcept;
+void UpdatePulse() noexcept;
 
-    static constexpr std::uint8_t Brightness = 100;
+void UpdatePolice() noexcept;
+void UpdateRainbow() noexcept;
 
-    //=====================================================================
-    // Tiempos
-    //=====================================================================
+void ShowColor(
+    std::uint8_t red,
+    std::uint8_t green,
+    std::uint8_t blue) noexcept;
 
-    // Tiempo que permanece el color del perfil antes del Rainbow.
-    static constexpr std::uint32_t ProfileColorTimeMs = 10000;
+void ShowAmbientColor(
+    AmbientColor color) noexcept;
 
-    // Velocidad del Rainbow Shift.
-    static constexpr std::uint32_t RainbowStepMs = 20;
+void ShowCurrentConfiguration() noexcept;
 
-    //=====================================================================
-    // Hardware
-    //=====================================================================
+void StartWtfConfirmationBlink() noexcept;
 
-    Adafruit_NeoPixel m_strip{
-        LedCount,
-        LedPin,
-        NEO_GRB + NEO_KHZ800};
+void UpdateWtfConfirmationBlink() noexcept;
 
-    //=====================================================================
-    // Estado general
-    //=====================================================================
+[[nodiscard]]
+std::uint32_t ColorToRgb(
+    AmbientColor color) const noexcept;
 
-    bool m_started{false};
+[[nodiscard]]
+AmbientColor NextNormalColor(
+    AmbientColor color) const noexcept;
 
-    bool m_enabled{true};
+[[nodiscard]]
+AmbientColor PreviousNormalColor(
+    AmbientColor color) const noexcept;
 
-    // true = estamos dentro del modo WTF.
-    bool m_wtfMode{false};
+[[nodiscard]]
+AmbientEffect NextEffectValue(
+    AmbientEffect effect) const noexcept;
 
-    // true = ya terminó la etapa de 10 segundos
-    // y actualmente estamos en Rainbow.
-    bool m_rainbowActive{false};
+[[nodiscard]]
+AmbientEffect PreviousEffectValue(
+    AmbientEffect effect) const noexcept;
 
-    //=====================================================================
-    // Perfil actual
-    //=====================================================================
+[[nodiscard]]
+std::uint32_t Wheel(
+    std::uint8_t position) const noexcept;
 
-    VehicleProfiles::DrivingProfileId m_profile{
-        VehicleProfiles::DrivingProfileId::Normal};
 
-    //=====================================================================
-    // Selección WTF
-    //=====================================================================
+private:
 
-    AmbientColor m_currentColor{
-        AmbientColor::Blue};
 
-    AmbientEffect m_currentEffect{
-        AmbientEffect::Solid};
+static constexpr std::uint8_t LedCount = 4;
+static constexpr std::uint8_t LedPin = 19;
+static constexpr std::uint8_t Brightness = 100;
 
-    //=====================================================================
-    // Temporizadores
-    //=====================================================================
+static constexpr std::uint32_t ProfileDisplayTimeMs = 10000;
 
-    std::uint32_t m_profileStartedAt{0};
+static constexpr std::uint32_t RainbowStepMs = 20;
 
-    std::uint32_t m_lastRainbowUpdate{0};
+static constexpr std::uint32_t FadeStepMs = 10;
 
-    //=====================================================================
-    // Rainbow
-    //=====================================================================
+static constexpr std::uint32_t FastBlinkIntervalMs = 150;
+static constexpr std::uint32_t SlowBlinkIntervalMs = 500;
 
-    std::uint16_t m_rainbowOffset{0};
+static constexpr std::uint32_t PulseStepMs = 10;
 
-    //=====================================================================
-    // Colores
-    //=====================================================================
+static constexpr std::uint32_t WtfConfirmationBlinkIntervalMs = 180;
+static constexpr std::uint8_t WtfConfirmationBlinkCount = 2;
 
-    [[nodiscard]]
-    std::uint32_t ColorForProfile(
-        VehicleProfiles::DrivingProfileId profile) const noexcept;
 
-    [[nodiscard]]
-    std::uint32_t ColorForAmbient(
-        AmbientColor color) const noexcept;
+private:
 
-    //=====================================================================
-    // Rainbow
-    //=====================================================================
 
-    [[nodiscard]]
-    std::uint32_t Wheel(
-        std::uint8_t position) const noexcept;
-
-    void ShowRainbow() noexcept;
-
-    //=====================================================================
-    // WTF - efectos
-    //=====================================================================
-
-    void ShowWtf() noexcept;
-
-    void ShowSolid() noexcept;
-
-    void ShowFade() noexcept;
-
-    void ShowSequentialFade() noexcept;
-
-    void ShowAlternateFade() noexcept;
-
-    void ShowFastBlink() noexcept;
-
-    void ShowSlowBlink() noexcept;
-
-    void ShowPulse() noexcept;
-
-    void ShowPolice() noexcept;
-
-    //=====================================================================
-    // Utilidades
-    //=====================================================================
-
-    void SetAll(
-        std::uint32_t color) noexcept;
-
-    void ShowProfileColor() noexcept;
-
-    void ShowCurrentColor() noexcept;
-
-    void ShowCurrentEffect() noexcept;
-
-    // Ajusta brillo individual de un LED.
-    void SetPixelScaled(
-        std::uint8_t led,
-        std::uint8_t red,
-        std::uint8_t green,
-        std::uint8_t blue,
-        std::uint8_t scale) noexcept;
-
-    // Onda triangular 0 -> 255 -> 0.
-    [[nodiscard]]
-    static std::uint8_t TriangularWave(
-        std::uint16_t phase) noexcept;
+Adafruit_NeoPixel m_strip{
+    LedCount,
+    LedPin,
+    NEO_GRB + NEO_KHZ800
 };
 
-} // namespace MK
+VehicleProfiles::DrivingProfileId m_profile{
+    VehicleProfiles::DrivingProfileId::Rookie
+};
 
-#endif // MK_AMBIENT_LIGHT_CONTROLLER_H
+bool m_enabled{true};
+bool m_wtfMode{false};
+
+/*
+ * Indica que el usuario terminó de configurar el ambiente
+ * y desea mantener esa configuración fuera del modo WTF.
+ *
+ * WTF es el modo de configuración.
+ * Custom Ambient es el modo de ejecución de la configuración.
+ */
+bool m_customAmbientActive{false};
+
+/*
+ * Configuración WTF actualmente seleccionada.
+ */
+AmbientColor m_currentColor{AmbientColor::Blue};
+AmbientEffect m_currentEffect{AmbientEffect::Solid};
+
+/*
+ * Última configuración WTF guardada.
+ *
+ * Estas variables NO se modifican cuando se cambia de perfil.
+ * Solamente cambian cuando el usuario modifica la configuración
+ * estando dentro de WTF.
+ */
+AmbientColor m_savedWtfColor{AmbientColor::Blue};
+AmbientEffect m_savedWtfEffect{AmbientEffect::Solid};
+
+/*
+ * Estado del modo normal.
+ */
+bool m_profileDisplayActive{true};
+std::uint32_t m_profileStartedAt{0};
+
+/*
+ * Rainbow.
+ */
+std::uint8_t m_rainbowOffset{0};
+std::uint32_t m_lastRainbowUpdate{0};
+
+/*
+ * Efectos.
+ */
+std::uint32_t m_lastEffectUpdate{0};
+std::uint8_t m_effectPhase{0};
+bool m_effectState{false};
+
+/*
+ * Fade / Pulse.
+ */
+std::int16_t m_effectBrightness{0};
+std::int8_t m_effectDirection{1};
+
+/*
+ * Confirmación visual al entrar/salir de WTF.
+ */
+bool m_wtfConfirmationActive{false};
+std::uint8_t m_wtfConfirmationCount{0};
+bool m_wtfConfirmationState{false};
+std::uint32_t m_wtfConfirmationStartedAt{0};
+
+/*
+ * Rainbow especial.
+ */
+bool m_rainbowActive{false};
+
+
+};
+
+}
+
+#endif

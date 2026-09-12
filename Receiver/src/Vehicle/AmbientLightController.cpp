@@ -1,257 +1,390 @@
 /******************************************************************************
- * Proyecto : MarioKart ESP32 RC
- * Archivo  : AmbientLightController.cpp
- *
- * Ambiente:
- *   4 x WS2812B
- *   GPIO 19
- *
- * Modo NORMAL:
- *   Cambio de perfil
- *       ↓
- *   Color del perfil
- *       ↓
- *   10 segundos
- *       ↓
- *   Rainbow Shift
- *
- * Modo WTF:
- *
- *   Perfil + Turbo durante 2 segundos
- *       ↓
- *   Entra / sale de WTF
- *
- *   Perfil + Adelante/Atrás
- *       → cambia COLOR
- *
- *   Perfil + Derecha/Izquierda
- *       → cambia EFECTO
- *
- * Todo es NO BLOQUEANTE.
- ******************************************************************************/
+
+* Proyecto : MarioKart ESP32 RC
+* Archivo  : AmbientLightController.cpp
+* Autor    : Narciso Ivan Cisneros Acosta
+*
+* Descripción:
+* Implementación del controlador de iluminación ambiental.
+*
+
+******************************************************************************/
 
 #include "AmbientLightController.h"
+
+#include <algorithm>
 
 namespace MK
 {
 
-//=============================================================================
-// Begin
-//=============================================================================
-
 bool AmbientLightController::Begin() noexcept
 {
-    m_strip.begin();
+m_strip.begin();
+m_strip.setBrightness(Brightness);
+m_strip.clear();
+m_strip.show();
 
-    m_strip.setBrightness(Brightness);
 
-    // Inicialmente apagamos todos los LEDs.
-    SetAll(m_strip.Color(0, 0, 0));
+m_enabled = true;
+m_wtfMode = false;
 
-    m_started = true;
-    m_enabled = true;
+m_currentColor = AmbientColor::Blue;
+m_currentEffect = AmbientEffect::Solid;
 
-    m_wtfMode = false;
-    m_rainbowActive = false;
+m_savedWtfColor = AmbientColor::Blue;
+m_savedWtfEffect = AmbientEffect::Solid;
 
-    m_profileStartedAt = millis();
-    m_lastRainbowUpdate = m_profileStartedAt;
+m_profileDisplayActive = true;
+m_profileStartedAt = millis();
 
-    m_rainbowOffset = 0;
+m_rainbowOffset = 0;
+m_lastRainbowUpdate = millis();
 
-    m_currentColor = AmbientColor::Blue;
-    m_currentEffect = AmbientEffect::Solid;
+m_lastEffectUpdate = millis();
+m_effectPhase = 0;
+m_effectState = false;
 
-    return true;
+m_effectBrightness = 0;
+m_effectDirection = 1;
+
+m_wtfConfirmationActive = false;
+m_wtfConfirmationCount = 0;
+m_wtfConfirmationState = false;
+m_wtfConfirmationStartedAt = 0;
+
+m_rainbowActive = false;
+
+return true;
+
+
 }
 
-//=============================================================================
+// -----------------------------------------------------------------------------
 // Update
-//=============================================================================
+// -----------------------------------------------------------------------------
 
 void AmbientLightController::Update() noexcept
 {
-    if (!m_started || !m_enabled)
-    {
-        return;
-    }
-
-    const std::uint32_t now = millis();
-
-    //=====================================================================
-    // WTF MODE
-    //=====================================================================
-
-    if (m_wtfMode)
-    {
-        ShowWtf();
-
-        return;
-    }
-
-    //=====================================================================
-    // MODO NORMAL
-    //=====================================================================
-
-    // Mientras no hayan pasado los 10 segundos,
-    // mantenemos el color correspondiente al perfil.
-    if (!m_rainbowActive)
-    {
-        if ((now - m_profileStartedAt) >= ProfileColorTimeMs)
-        {
-            m_rainbowActive = true;
-
-            m_rainbowOffset = 0;
-
-            m_lastRainbowUpdate = now;
-
-            ShowRainbow();
-        }
-
-        return;
-    }
-
-    //=====================================================================
-    // RAINBOW
-    //=====================================================================
-
-    if ((now - m_lastRainbowUpdate) >= RainbowStepMs)
-    {
-        m_lastRainbowUpdate = now;
-
-        ++m_rainbowOffset;
-
-        ShowRainbow();
-    }
+if (!m_enabled)
+{
+return;
 }
 
-//=============================================================================
-// SetProfile
-//=============================================================================
+
+/*
+ * Mientras se ejecuta la confirmación visual de WTF,
+ * ésta tiene prioridad sobre cualquier otro efecto.
+ */
+if (m_wtfConfirmationActive)
+{
+    UpdateWtfConfirmationBlink();
+    return;
+}
+
+if (m_wtfMode)
+{
+    UpdateWtfMode();
+}
+else if (m_customAmbientActive)
+{
+    /*
+     * Ambiente personalizado configurado por el usuario.
+     *
+     * Permanece activo indefinidamente.
+     */
+    UpdateWtfMode();
+}
+else
+{
+    UpdateNormalMode();
+}
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Normal mode
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateNormalMode() noexcept
+{
+const std::uint32_t now = millis();
+
+
+/*
+ * Durante los primeros 10 segundos mostramos el color del perfil.
+ */
+if (m_profileDisplayActive)
+{
+    ShowAmbientColor(
+        m_currentColor);
+
+    if ((now - m_profileStartedAt) >=
+        ProfileDisplayTimeMs)
+    {
+        m_profileDisplayActive = false;
+        m_rainbowActive = true;
+        m_rainbowOffset = 0;
+        m_lastRainbowUpdate = now;
+    }
+
+    return;
+}
+
+/*
+ * Después de los 10 segundos:
+ * Rainbow continuo.
+ */
+UpdateRainbow();
+
+
+}
+
+// -----------------------------------------------------------------------------
+// WTF mode
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateWtfMode() noexcept
+{
+switch (m_currentColor)
+{
+case AmbientColor::Police:
+UpdatePolice();
+return;
+
+
+    case AmbientColor::Rainbow:
+        UpdateRainbow();
+        return;
+
+    case AmbientColor::Off:
+        Off();
+        return;
+
+    default:
+        break;
+}
+
+switch (m_currentEffect)
+{
+    case AmbientEffect::Solid:
+        UpdateSolid();
+        break;
+
+    case AmbientEffect::Fade:
+        UpdateFade();
+        break;
+
+    case AmbientEffect::SequentialFade:
+        UpdateSequentialFade();
+        break;
+
+    case AmbientEffect::AlternateFade:
+        UpdateAlternateFade();
+        break;
+
+    case AmbientEffect::FastBlink:
+        UpdateFastBlink();
+        break;
+
+    case AmbientEffect::SlowBlink:
+        UpdateSlowBlink();
+        break;
+
+    case AmbientEffect::Pulse:
+        UpdatePulse();
+        break;
+
+    default:
+        UpdateSolid();
+        break;
+}
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Profile
+// -----------------------------------------------------------------------------
 
 void AmbientLightController::SetProfile(
     VehicleProfiles::DrivingProfileId profile) noexcept
 {
     m_profile = profile;
 
-    //=====================================================================
-    // Si estábamos en WTF, cambiar de perfil cancela WTF.
-    //=====================================================================
+    /*
+     * Un cambio de perfil siempre devuelve la iluminación
+     * al comportamiento normal.
+     */
+    m_wtfMode = false;
+    m_customAmbientActive = false;
 
-    if (m_wtfMode)
-    {
-        m_wtfMode = false;
+    /*
+     * IMPORTANTE:
+     *
+     * NO tocamos:
+     *
+     *   m_savedWtfColor
+     *   m_savedWtfEffect
+     *
+     * La configuración WTF permanece guardada.
+     */
 
-        m_currentColor = AmbientColor::Blue;
-        m_currentEffect = AmbientEffect::Solid;
-    }
-
-    if (!m_started)
-    {
-        return;
-    }
-
-    if (!m_enabled)
-    {
-        return;
-    }
-
-    //=====================================================================
-    // Reiniciamos la secuencia:
-    //
-    // Perfil
-    //   ↓
-    // Color
-    //   ↓
-    // 10 segundos
-    //   ↓
-    // Rainbow
-    //=====================================================================
-
-    m_rainbowActive = false;
-
+    m_profileDisplayActive = true;
     m_profileStartedAt = millis();
 
-    m_lastRainbowUpdate = m_profileStartedAt;
-
+    m_rainbowActive = false;
     m_rainbowOffset = 0;
 
-    ShowProfileColor();
-}
+    m_lastEffectUpdate = millis();
+    m_effectPhase = 0;
+    m_effectState = false;
 
-//=============================================================================
-// WTF MODE
-//=============================================================================
+    m_effectBrightness = 0;
+    m_effectDirection = 1;
+
+    /*
+     * Color correspondiente al perfil.
+     */
+    switch (profile)
+    {
+        case VehicleProfiles::DrivingProfileId::Rookie:
+            m_currentColor = AmbientColor::Green;
+            break;
+
+        case VehicleProfiles::DrivingProfileId::Normal:
+            m_currentColor = AmbientColor::Blue;
+            break;
+
+        case VehicleProfiles::DrivingProfileId::Advanced:
+            m_currentColor = AmbientColor::Orange;
+            break;
+
+        case VehicleProfiles::DrivingProfileId::Drift:
+            m_currentColor = AmbientColor::Purple;
+            break;
+
+        case VehicleProfiles::DrivingProfileId::Police:
+            m_currentColor = AmbientColor::Police;
+            break;
+
+        default:
+            m_currentColor = AmbientColor::Blue;
+            break;
+    }
+
+    /*
+     * El efecto normal no importa mientras se muestra
+     * el color del perfil.
+     */
+    ShowAmbientColor(m_currentColor);
+}
+// -----------------------------------------------------------------------------
+// WTF toggle
+// -----------------------------------------------------------------------------
 
 void AmbientLightController::ToggleWtfMode() noexcept
 {
-    if (!m_started)
-    {
-        return;
-    }
-
-    m_wtfMode = !m_wtfMode;
-
-    // Reiniciamos la animación del efecto.
-    m_rainbowOffset = 0;
-
-    m_lastRainbowUpdate = millis();
-
-    //=====================================================================
-    // ENTRAR A WTF
-    //=====================================================================
-
     if (m_wtfMode)
     {
-        // Primer WTF:
-        //
-        // Azul + Fijo
-        //
-        m_currentColor = AmbientColor::Blue;
+        /*
+         * =========================================================
+         * SALIENDO DE WTF
+         * =========================================================
+         *
+         * Guardamos AMBAS cosas:
+         *
+         *   - color
+         *   - efecto
+         */
+        m_savedWtfColor = m_currentColor;
+        m_savedWtfEffect = m_currentEffect;
 
-        m_currentEffect = AmbientEffect::Solid;
+        /*
+         * WTF deja de ser el modo de configuración.
+         */
+        m_wtfMode = false;
 
-        ShowCurrentEffect();
+        /*
+         * Pero el ambiente personalizado queda ACTIVO.
+         *
+         * Esta es la diferencia importante:
+         *
+         * WTF = configuración
+         * CustomAmbient = ejecución permanente
+         */
+        m_customAmbientActive = true;
+
+        /*
+         * Ya no debe existir la secuencia:
+         *
+         * perfil → 10 segundos → Rainbow
+         *
+         * porque ya no estamos en modo normal.
+         */
+        m_profileDisplayActive = false;
+        m_rainbowActive = false;
+
+        /*
+         * Reiniciamos el estado del efecto.
+         */
+        m_lastEffectUpdate = millis();
+        m_effectPhase = 0;
+        m_effectState = false;
+
+        m_effectBrightness = 0;
+        m_effectDirection = 1;
+
+        /*
+         * Confirmación visual de salida.
+         */
+        StartWtfConfirmationBlink();
 
         return;
     }
 
-    //=====================================================================
-    // SALIR DE WTF
-    //=====================================================================
+    /*
+     * =========================================================
+     * ENTRANDO EN WTF
+     * =========================================================
+     */
 
-    // Al salir:
-    //
-    // Color del perfil
-    //      ↓
-    //    10 s
-    //      ↓
-    //   Rainbow
-    //
+    /*
+     * Recuperamos la última configuración guardada.
+     */
+    m_currentColor = m_savedWtfColor;
+    m_currentEffect = m_savedWtfEffect;
 
+    m_wtfMode = true;
+    m_customAmbientActive = false;
+
+    m_profileDisplayActive = false;
     m_rainbowActive = false;
 
-    m_profileStartedAt = millis();
+    m_lastEffectUpdate = millis();
+    m_effectPhase = 0;
+    m_effectState = false;
 
-    m_lastRainbowUpdate = m_profileStartedAt;
+    m_effectBrightness = 0;
+    m_effectDirection = 1;
 
-    m_rainbowOffset = 0;
-
-    ShowProfileColor();
+    /*
+     * Confirmación visual.
+     */
+    StartWtfConfirmationBlink();
 }
-
-//=============================================================================
-// IsWtfMode
-//=============================================================================
+// -----------------------------------------------------------------------------
+// WTF state
+// -----------------------------------------------------------------------------
 
 bool AmbientLightController::IsWtfMode() const noexcept
 {
-    return m_wtfMode;
+return m_wtfMode;
 }
 
-//=============================================================================
-// NextColor
-//=============================================================================
+// -----------------------------------------------------------------------------
+// Colors
+// -----------------------------------------------------------------------------
 
 void AmbientLightController::NextColor() noexcept
 {
@@ -260,43 +393,24 @@ void AmbientLightController::NextColor() noexcept
         return;
     }
 
-    const std::uint8_t current =
-        static_cast<std::uint8_t>(m_currentColor);
-
-    std::uint8_t next =
-        current + 1;
-
-    if (next >=
-        static_cast<std::uint8_t>(AmbientColor::Count))
-    {
-        next = 0;
-    }
-
     m_currentColor =
-        static_cast<AmbientColor>(next);
+        NextNormalColor(m_currentColor);
 
-    // Si seleccionamos OFF, simplemente apagamos.
-    if (m_currentColor == AmbientColor::Off)
-    {
-        SetAll(m_strip.Color(0, 0, 0));
+    /*
+     * Guardamos inmediatamente el color.
+     */
+    m_savedWtfColor = m_currentColor;
 
-        return;
-    }
+    /*
+     * El efecto seleccionado NO cambia.
+     */
+    m_effectPhase = 0;
+    m_effectState = false;
+    m_effectBrightness = 0;
+    m_effectDirection = 1;
 
-    // Police es un efecto especial.
-    if (m_currentColor == AmbientColor::Police)
-    {
-        ShowPolice();
-
-        return;
-    }
-
-    ShowCurrentEffect();
+    m_lastEffectUpdate = millis();
 }
-
-//=============================================================================
-// PreviousColor
-//=============================================================================
 
 void AmbientLightController::PreviousColor() noexcept
 {
@@ -305,53 +419,24 @@ void AmbientLightController::PreviousColor() noexcept
         return;
     }
 
-    const std::uint8_t current =
-        static_cast<std::uint8_t>(m_currentColor);
-
-    std::uint8_t previous;
-
-    if (current == 0)
-    {
-        previous =
-            static_cast<std::uint8_t>(
-                AmbientColor::Count) - 1;
-    }
-    else
-    {
-        previous = current - 1;
-    }
-
     m_currentColor =
-        static_cast<AmbientColor>(previous);
+        PreviousNormalColor(m_currentColor);
 
-    //=====================================================================
-    // OFF
-    //=====================================================================
+    /*
+     * Guardamos inmediatamente el color.
+     */
+    m_savedWtfColor = m_currentColor;
 
-    if (m_currentColor == AmbientColor::Off)
-    {
-        SetAll(m_strip.Color(0, 0, 0));
+    /*
+     * El efecto seleccionado NO cambia.
+     */
+    m_effectPhase = 0;
+    m_effectState = false;
+    m_effectBrightness = 0;
+    m_effectDirection = 1;
 
-        return;
-    }
-
-    //=====================================================================
-    // POLICE
-    //=====================================================================
-
-    if (m_currentColor == AmbientColor::Police)
-    {
-        ShowPolice();
-
-        return;
-    }
-
-    ShowCurrentEffect();
+    m_lastEffectUpdate = millis();
 }
-
-//=============================================================================
-// NextEffect
-//=============================================================================
 
 void AmbientLightController::NextEffect() noexcept
 {
@@ -360,41 +445,34 @@ void AmbientLightController::NextEffect() noexcept
         return;
     }
 
-    // OFF no tiene efectos.
-    if (m_currentColor == AmbientColor::Off)
+    /*
+     * Police, Rainbow y Off son modos especiales de color.
+     * No utilizan los efectos normales.
+     */
+    if (m_currentColor == AmbientColor::Police ||
+        m_currentColor == AmbientColor::Rainbow ||
+        m_currentColor == AmbientColor::Off)
     {
         return;
-    }
-
-    // Police tampoco utiliza los efectos normales.
-    if (m_currentColor == AmbientColor::Police)
-    {
-        return;
-    }
-
-    const std::uint8_t current =
-        static_cast<std::uint8_t>(m_currentEffect);
-
-    std::uint8_t next =
-        current + 1;
-
-    if (next >=
-        static_cast<std::uint8_t>(AmbientEffect::Count))
-    {
-        next = 0;
     }
 
     m_currentEffect =
-        static_cast<AmbientEffect>(next);
+        NextEffectValue(m_currentEffect);
 
-    m_rainbowOffset = 0;
+    /*
+     * Guardamos inmediatamente el efecto.
+     *
+     * El color permanece intacto.
+     */
+    m_savedWtfEffect = m_currentEffect;
 
-    ShowCurrentEffect();
+    m_effectPhase = 0;
+    m_effectState = false;
+    m_effectBrightness = 0;
+    m_effectDirection = 1;
+
+    m_lastEffectUpdate = millis();
 }
-
-//=============================================================================
-// PreviousEffect
-//=============================================================================
 
 void AmbientLightController::PreviousEffect() noexcept
 {
@@ -403,822 +481,839 @@ void AmbientLightController::PreviousEffect() noexcept
         return;
     }
 
-    if (m_currentColor == AmbientColor::Off)
+    if (m_currentColor == AmbientColor::Police ||
+        m_currentColor == AmbientColor::Rainbow ||
+        m_currentColor == AmbientColor::Off)
     {
         return;
     }
 
-    if (m_currentColor == AmbientColor::Police)
+    m_currentEffect =
+        PreviousEffectValue(m_currentEffect);
+
+    /*
+     * Guardamos inmediatamente el efecto.
+     *
+     * El color permanece intacto.
+     */
+    m_savedWtfEffect = m_currentEffect;
+
+    m_effectPhase = 0;
+    m_effectState = false;
+    m_effectBrightness = 0;
+    m_effectDirection = 1;
+
+    m_lastEffectUpdate = millis();
+}
+
+// -----------------------------------------------------------------------------
+// Current configuration
+// -----------------------------------------------------------------------------
+
+AmbientLightController::AmbientColor
+AmbientLightController::CurrentColor() const noexcept
+{
+return m_currentColor;
+}
+
+AmbientLightController::AmbientEffect
+AmbientLightController::CurrentEffect() const noexcept
+{
+return m_currentEffect;
+}
+
+// -----------------------------------------------------------------------------
+// Enable / disable
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::Off() noexcept
+{
+m_strip.clear();
+m_strip.show();
+}
+
+void AmbientLightController::SetEnabled(bool enabled) noexcept
+{
+m_enabled = enabled;
+
+
+if (!m_enabled)
+{
+    Off();
+}
+
+
+}
+
+bool AmbientLightController::IsEnabled() const noexcept
+{
+return m_enabled;
+}
+
+// -----------------------------------------------------------------------------
+// WTF confirmation
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::StartWtfConfirmationBlink() noexcept
+{
+m_wtfConfirmationActive = true;
+m_wtfConfirmationCount = 0;
+m_wtfConfirmationState = false;
+m_wtfConfirmationStartedAt = millis();
+
+
+/*
+ * Comenzamos inmediatamente mostrando el color.
+ * No mostramos OFF como primer estado visible.
+ */
+ShowCurrentConfiguration();
+
+
+}
+
+void AmbientLightController::UpdateWtfConfirmationBlink() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_wtfConfirmationStartedAt) <
+    WtfConfirmationBlinkIntervalMs)
+{
+    return;
+}
+
+m_wtfConfirmationStartedAt = now;
+
+m_wtfConfirmationState =
+    !m_wtfConfirmationState;
+
+if (m_wtfConfirmationState)
+{
+    ShowCurrentConfiguration();
+}
+else
+{
+    Off();
+
+    ++m_wtfConfirmationCount;
+
+    if (m_wtfConfirmationCount >=
+        WtfConfirmationBlinkCount)
+    {
+        /*
+         * Terminamos la confirmación.
+         *
+         * El siguiente Update() comenzará inmediatamente el
+         * efecto seleccionado.
+         */
+        m_wtfConfirmationActive = false;
+        m_wtfConfirmationState = false;
+
+        m_lastEffectUpdate = millis();
+        m_effectPhase = 0;
+        m_effectState = false;
+        m_effectBrightness = 0;
+        m_effectDirection = 1;
+    }
+}
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Current configuration preview
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::ShowCurrentConfiguration() noexcept
+{
+if (m_currentColor == AmbientColor::Police)
+{
+/*
+* Para la confirmación mostramos azul como color representativo.
+*/
+ShowColor(0, 0, 255);
+return;
+}
+
+
+if (m_currentColor == AmbientColor::Rainbow)
+{
+    ShowColor(255, 0, 0);
+    return;
+}
+
+if (m_currentColor == AmbientColor::Off)
+{
+    Off();
+    return;
+}
+
+const std::uint32_t rgb =
+    ColorToRgb(m_currentColor);
+
+const std::uint8_t red =
+    static_cast<std::uint8_t>((rgb >> 16) & 0xFF);
+
+const std::uint8_t green =
+    static_cast<std::uint8_t>((rgb >> 8) & 0xFF);
+
+const std::uint8_t blue =
+    static_cast<std::uint8_t>(rgb & 0xFF);
+
+ShowColor(red, green, blue);
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Solid
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateSolid() noexcept
+{
+ShowAmbientColor(m_currentColor);
+}
+
+// -----------------------------------------------------------------------------
+// Fade
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateFade() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_lastEffectUpdate) < FadeStepMs)
+{
+    return;
+}
+
+m_lastEffectUpdate = now;
+
+m_effectBrightness +=
+    static_cast<std::int16_t>(m_effectDirection) * 5;
+
+if (m_effectBrightness >= 255)
+{
+    m_effectBrightness = 255;
+    m_effectDirection = -1;
+}
+else if (m_effectBrightness <= 20)
+{
+    m_effectBrightness = 20;
+    m_effectDirection = 1;
+}
+
+const std::uint32_t rgb =
+    ColorToRgb(m_currentColor);
+
+const std::uint8_t red =
+    static_cast<std::uint8_t>(
+        ((rgb >> 16) & 0xFF) *
+        m_effectBrightness / 255);
+
+const std::uint8_t green =
+    static_cast<std::uint8_t>(
+        ((rgb >> 8) & 0xFF) *
+        m_effectBrightness / 255);
+
+const std::uint8_t blue =
+    static_cast<std::uint8_t>(
+        (rgb & 0xFF) *
+        m_effectBrightness / 255);
+
+ShowColor(red, green, blue);
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Sequential fade
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateSequentialFade() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_lastEffectUpdate) < FadeStepMs)
+{
+    return;
+}
+
+m_lastEffectUpdate = now;
+
+const std::uint32_t rgb =
+    ColorToRgb(m_currentColor);
+
+const std::uint8_t baseRed =
+    static_cast<std::uint8_t>((rgb >> 16) & 0xFF);
+
+const std::uint8_t baseGreen =
+    static_cast<std::uint8_t>((rgb >> 8) & 0xFF);
+
+const std::uint8_t baseBlue =
+    static_cast<std::uint8_t>(rgb & 0xFF);
+
+for (std::uint8_t led = 0; led < LedCount; ++led)
+{
+    const std::uint8_t phase =
+        static_cast<std::uint8_t>(
+            m_effectPhase + led * 64);
+
+    const std::uint8_t brightness =
+        static_cast<std::uint8_t>(
+            (std::sin(
+                static_cast<float>(phase) *
+                0.02454369f) + 1.0f) *
+            127.5f);
+
+    m_strip.setPixelColor(
+        led,
+        baseRed * brightness / 255,
+        baseGreen * brightness / 255,
+        baseBlue * brightness / 255);
+}
+
+m_strip.show();
+
+++m_effectPhase;
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Alternate fade
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateAlternateFade() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_lastEffectUpdate) < FadeStepMs)
+{
+    return;
+}
+
+m_lastEffectUpdate = now;
+
+m_effectBrightness +=
+    static_cast<std::int16_t>(m_effectDirection) * 5;
+
+if (m_effectBrightness >= 255)
+{
+    m_effectBrightness = 255;
+    m_effectDirection = -1;
+}
+else if (m_effectBrightness <= 20)
+{
+    m_effectBrightness = 20;
+    m_effectDirection = 1;
+}
+
+const std::uint32_t rgb =
+    ColorToRgb(m_currentColor);
+
+const std::uint8_t red =
+    static_cast<std::uint8_t>((rgb >> 16) & 0xFF);
+
+const std::uint8_t green =
+    static_cast<std::uint8_t>((rgb >> 8) & 0xFF);
+
+const std::uint8_t blue =
+    static_cast<std::uint8_t>(rgb & 0xFF);
+
+for (std::uint8_t led = 0; led < LedCount; ++led)
+{
+    const bool firstGroup =
+        (led % 2) == 0;
+
+    const bool visible =
+        firstGroup == m_effectState;
+
+    const std::uint8_t brightness =
+        visible
+            ? static_cast<std::uint8_t>(m_effectBrightness)
+            : 0;
+
+    m_strip.setPixelColor(
+        led,
+        red * brightness / 255,
+        green * brightness / 255,
+        blue * brightness / 255);
+}
+
+m_strip.show();
+
+if (m_effectBrightness <= 20 ||
+    m_effectBrightness >= 255)
+{
+    m_effectState = !m_effectState;
+}
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Fast blink
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateFastBlink() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_lastEffectUpdate) <
+    FastBlinkIntervalMs)
+{
+    return;
+}
+
+m_lastEffectUpdate = now;
+m_effectState = !m_effectState;
+
+if (m_effectState)
+{
+    ShowAmbientColor(m_currentColor);
+}
+else
+{
+    Off();
+}
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Slow blink
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateSlowBlink() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_lastEffectUpdate) <
+    SlowBlinkIntervalMs)
+{
+    return;
+}
+
+m_lastEffectUpdate = now;
+m_effectState = !m_effectState;
+
+if (m_effectState)
+{
+    ShowAmbientColor(m_currentColor);
+}
+else
+{
+    Off();
+}
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Pulse
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdatePulse() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_lastEffectUpdate) < PulseStepMs)
+{
+    return;
+}
+
+m_lastEffectUpdate = now;
+
+m_effectBrightness +=
+    static_cast<std::int16_t>(m_effectDirection) * 8;
+
+if (m_effectBrightness >= 255)
+{
+    m_effectBrightness = 255;
+    m_effectDirection = -1;
+}
+else if (m_effectBrightness <= 20)
+{
+    m_effectBrightness = 20;
+    m_effectDirection = 1;
+}
+
+const std::uint32_t rgb =
+    ColorToRgb(m_currentColor);
+
+const std::uint8_t red =
+    static_cast<std::uint8_t>((rgb >> 16) & 0xFF);
+
+const std::uint8_t green =
+    static_cast<std::uint8_t>((rgb >> 8) & 0xFF);
+
+const std::uint8_t blue =
+    static_cast<std::uint8_t>(rgb & 0xFF);
+
+ShowColor(
+    red * m_effectBrightness / 255,
+    green * m_effectBrightness / 255,
+    blue * m_effectBrightness / 255);
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Police
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// Police
+// -----------------------------------------------------------------------------
+
+
+void AmbientLightController::UpdatePolice() noexcept
+{
+    /*
+     * =========================================================
+     * POLICE
+     * =========================================================
+     *
+     * Efecto de patrullaje alternado:
+     *
+     *      🔵 ⚫ 🔵 ⚫
+     *      ⚫ 🔴 ⚫ 🔴
+     *
+     * Los LEDs pares e impares se alternan.
+     *
+     * La velocidad utiliza como referencia el mismo intervalo
+     * definido para SlowBlink.
+     *
+     * IMPORTANTE:
+     *
+     * Police es un efecto independiente.
+     * AlternateFade solamente sirve como referencia para la
+     * distribución alternada de los LEDs.
+     */
+
+    const std::uint32_t now = millis();
+
+    if ((now - m_lastEffectUpdate) <
+        SlowBlinkIntervalMs)
     {
         return;
     }
 
-    const std::uint8_t current =
-        static_cast<std::uint8_t>(m_currentEffect);
+    m_lastEffectUpdate = now;
 
-    std::uint8_t previous;
+    m_effectState = !m_effectState;
 
-    if (current == 0)
+    for (std::uint8_t led = 0; led < LedCount; ++led)
     {
-        previous =
+        const bool firstGroup =
+            (led % 2) == 0;
+
+        const bool visible =
+            firstGroup == m_effectState;
+
+        if (visible)
+        {
+            if (m_effectState)
+            {
+                /*
+                 * Grupo de LEDs pares → Azul.
+                 */
+                m_strip.setPixelColor(
+                    led,
+                    0,
+                    0,
+                    255);
+            }
+            else
+            {
+                /*
+                 * Grupo de LEDs impares → Rojo.
+                 */
+                m_strip.setPixelColor(
+                    led,
+                    255,
+                    0,
+                    0);
+            }
+        }
+        else
+        {
+            /*
+             * Grupo contrario apagado.
+             */
+            m_strip.setPixelColor(
+                led,
+                0,
+                0,
+                0);
+        }
+    }
+
+    m_strip.show();
+}
+
+
+// -----------------------------------------------------------------------------
+// Rainbow
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::UpdateRainbow() noexcept
+{
+const std::uint32_t now = millis();
+
+
+if ((now - m_lastRainbowUpdate) <
+    RainbowStepMs)
+{
+    return;
+}
+
+m_lastRainbowUpdate = now;
+
+for (std::uint8_t led = 0; led < LedCount; ++led)
+{
+    const std::uint8_t position =
+        static_cast<std::uint8_t>(
+            m_rainbowOffset +
+            led * 64);
+
+    const std::uint32_t color =
+        Wheel(position);
+
+    m_strip.setPixelColor(led, color);
+}
+
+m_strip.show();
+
+++m_rainbowOffset;
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Show helpers
+// -----------------------------------------------------------------------------
+
+void AmbientLightController::ShowColor(
+std::uint8_t red,
+std::uint8_t green,
+std::uint8_t blue) noexcept
+{
+for (std::uint8_t led = 0; led < LedCount; ++led)
+{
+m_strip.setPixelColor(
+led,
+red,
+green,
+blue);
+}
+
+
+m_strip.show();
+
+
+}
+
+void AmbientLightController::ShowAmbientColor(
+AmbientColor color) noexcept
+{
+if (color == AmbientColor::Police)
+{
+ShowColor(0, 0, 255);
+return;
+}
+
+
+if (color == AmbientColor::Rainbow)
+{
+    UpdateRainbow();
+    return;
+}
+
+if (color == AmbientColor::Off)
+{
+    Off();
+    return;
+}
+
+const std::uint32_t rgb =
+    ColorToRgb(color);
+
+ShowColor(
+    static_cast<std::uint8_t>((rgb >> 16) & 0xFF),
+    static_cast<std::uint8_t>((rgb >> 8) & 0xFF),
+    static_cast<std::uint8_t>(rgb & 0xFF));
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Color helpers
+// -----------------------------------------------------------------------------
+
+std::uint32_t AmbientLightController::ColorToRgb(
+AmbientColor color) const noexcept
+{
+switch (color)
+{
+case AmbientColor::Blue:
+return 0x0000FF;
+
+
+    case AmbientColor::Cyan:
+        return 0x00FFFF;
+
+    case AmbientColor::White:
+        return 0xFFFFFF;
+
+    case AmbientColor::Red:
+        return 0xFF0000;
+
+    case AmbientColor::Orange:
+        return 0xFF8000;
+
+    case AmbientColor::Yellow:
+        return 0xFFFF00;
+
+    case AmbientColor::Green:
+        return 0x00FF00;
+
+    case AmbientColor::Purple:
+        return 0xB000FF;
+
+    default:
+        return 0x000000;
+}
+
+
+}
+
+AmbientLightController::AmbientColor
+AmbientLightController::NextNormalColor(
+    AmbientColor color) const noexcept
+{
+    constexpr std::uint8_t ColorCount =
+        static_cast<std::uint8_t>(AmbientColor::Off) + 1;
+
+    std::uint8_t index =
+        static_cast<std::uint8_t>(color);
+
+    ++index;
+
+    if (index >= ColorCount)
+    {
+        index = 0;
+    }
+
+    return static_cast<AmbientColor>(index);
+}
+
+
+AmbientLightController::AmbientColor
+AmbientLightController::PreviousNormalColor(
+    AmbientColor color) const noexcept
+{
+    constexpr std::uint8_t ColorCount =
+        static_cast<std::uint8_t>(AmbientColor::Off) + 1;
+
+    std::uint8_t index =
+        static_cast<std::uint8_t>(color);
+
+    if (index == 0 ||
+        index >= ColorCount)
+    {
+        index = ColorCount - 1;
+    }
+    else
+    {
+        --index;
+    }
+
+    return static_cast<AmbientColor>(index);
+}
+
+
+AmbientLightController::AmbientEffect
+AmbientLightController::NextEffectValue(
+    AmbientEffect effect) const noexcept
+{
+    std::uint8_t index =
+        static_cast<std::uint8_t>(effect);
+
+    ++index;
+
+    if (index >=
+        static_cast<std::uint8_t>(AmbientEffect::Count))
+    {
+        index = 0;
+    }
+
+    return static_cast<AmbientEffect>(index);
+}
+
+AmbientLightController::AmbientEffect
+AmbientLightController::PreviousEffectValue(
+    AmbientEffect effect) const noexcept
+{
+    std::uint8_t index =
+        static_cast<std::uint8_t>(effect);
+
+    if (index == 0)
+    {
+        index =
             static_cast<std::uint8_t>(
                 AmbientEffect::Count) - 1;
     }
     else
     {
-        previous = current - 1;
+        --index;
     }
 
-    m_currentEffect =
-        static_cast<AmbientEffect>(previous);
-
-    m_rainbowOffset = 0;
-
-    ShowCurrentEffect();
+    return static_cast<AmbientEffect>(index);
 }
-
-//=============================================================================
-// CurrentColor
-//=============================================================================
-
-AmbientLightController::AmbientColor
-AmbientLightController::CurrentColor() const noexcept
-{
-    return m_currentColor;
-}
-
-//=============================================================================
-// CurrentEffect
-//=============================================================================
-
-AmbientLightController::AmbientEffect
-AmbientLightController::CurrentEffect() const noexcept
-{
-    return m_currentEffect;
-}
-
-//=============================================================================
-// SetEnabled
-//=============================================================================
-
-void AmbientLightController::SetEnabled(
-    bool enabled) noexcept
-{
-    m_enabled = enabled;
-
-    if (!m_enabled)
-    {
-        SetAll(m_strip.Color(0, 0, 0));
-    }
-    else
-    {
-        m_rainbowActive = false;
-
-        m_profileStartedAt = millis();
-
-        ShowProfileColor();
-    }
-}
-
-//=============================================================================
-// IsEnabled
-//=============================================================================
-
-bool AmbientLightController::IsEnabled() const noexcept
-{
-    return m_enabled;
-}
-
-//=============================================================================
-// Off
-//=============================================================================
-
-void AmbientLightController::Off() noexcept
-{
-    m_enabled = false;
-
-    m_wtfMode = false;
-
-    m_rainbowActive = false;
-
-    SetAll(m_strip.Color(0, 0, 0));
-}
-
-//=============================================================================
-// ColorForProfile
-//=============================================================================
-
-std::uint32_t AmbientLightController::ColorForProfile(
-    VehicleProfiles::DrivingProfileId profile) const noexcept
-{
-    switch (profile)
-    {
-        case VehicleProfiles::DrivingProfileId::Rookie:
-            return m_strip.Color(0, 255, 0);
-
-        case VehicleProfiles::DrivingProfileId::Normal:
-            return m_strip.Color(0, 0, 255);
-
-        case VehicleProfiles::DrivingProfileId::Advanced:
-            return m_strip.Color(255, 80, 0);
-
-        case VehicleProfiles::DrivingProfileId::Drift:
-            return m_strip.Color(180, 0, 255);
-
-        case VehicleProfiles::DrivingProfileId::Police:
-            return m_strip.Color(0, 80, 255);
-
-        default:
-            return m_strip.Color(255, 255, 255);
-    }
-}
-
-//=============================================================================
-// ColorForAmbient
-//=============================================================================
-
-std::uint32_t AmbientLightController::ColorForAmbient(
-    AmbientColor color) const noexcept
-{
-    switch (color)
-    {
-        case AmbientColor::Blue:
-            return m_strip.Color(
-                0,
-                0,
-                255);
-
-        case AmbientColor::Cyan:
-            return m_strip.Color(
-                0,
-                220,
-                255);
-
-        case AmbientColor::White:
-            return m_strip.Color(
-                255,
-                255,
-                255);
-
-        case AmbientColor::Red:
-            return m_strip.Color(
-                255,
-                0,
-                0);
-
-        case AmbientColor::Orange:
-            return m_strip.Color(
-                255,
-                80,
-                0);
-
-        case AmbientColor::Yellow:
-            return m_strip.Color(
-                255,
-                220,
-                0);
-
-        case AmbientColor::Green:
-            return m_strip.Color(
-                0,
-                255,
-                0);
-
-        case AmbientColor::Purple:
-            return m_strip.Color(
-                180,
-                0,
-                255);
-
-        case AmbientColor::Police:
-        case AmbientColor::Off:
-        default:
-            return m_strip.Color(
-                0,
-                0,
-                0);
-    }
-}
-
-//=============================================================================
-// ShowProfileColor
-//=============================================================================
-
-void AmbientLightController::ShowProfileColor() noexcept
-{
-    SetAll(
-        ColorForProfile(m_profile));
-}
-
-//=============================================================================
-// ShowCurrentColor
-//=============================================================================
-
-void AmbientLightController::ShowCurrentColor() noexcept
-{
-    if (m_currentColor == AmbientColor::Off)
-    {
-        SetAll(
-            m_strip.Color(0, 0, 0));
-
-        return;
-    }
-
-    if (m_currentColor == AmbientColor::Police)
-    {
-        ShowPolice();
-
-        return;
-    }
-
-    SetAll(
-        ColorForAmbient(m_currentColor));
-}
-
-//=============================================================================
-// ShowCurrentEffect
-//=============================================================================
-
-void AmbientLightController::ShowCurrentEffect() noexcept
-{
-    if (!m_wtfMode)
-    {
-        return;
-    }
-
-    if (m_currentColor == AmbientColor::Off)
-    {
-        SetAll(
-            m_strip.Color(0, 0, 0));
-
-        return;
-    }
-
-    if (m_currentColor == AmbientColor::Police)
-    {
-        ShowPolice();
-
-        return;
-    }
-
-    ShowWtf();
-}
-
-//=============================================================================
-// ShowWtf
-//=============================================================================
-
-void AmbientLightController::ShowWtf() noexcept
-{
-    switch (m_currentEffect)
-    {
-        case AmbientEffect::Solid:
-            ShowSolid();
-            break;
-
-        case AmbientEffect::Fade:
-            ShowFade();
-            break;
-
-        case AmbientEffect::SequentialFade:
-            ShowSequentialFade();
-            break;
-
-        case AmbientEffect::AlternateFade:
-            ShowAlternateFade();
-            break;
-
-        case AmbientEffect::FastBlink:
-            ShowFastBlink();
-            break;
-
-        case AmbientEffect::SlowBlink:
-            ShowSlowBlink();
-            break;
-
-        case AmbientEffect::Pulse:
-            ShowPulse();
-            break;
-
-        default:
-            ShowSolid();
-            break;
-    }
-}
-
-//=============================================================================
-// SOLID
-//=============================================================================
-
-void AmbientLightController::ShowSolid() noexcept
-{
-    ShowCurrentColor();
-}
-
-//=============================================================================
-// FADE PAREJO
-//=============================================================================
-
-void AmbientLightController::ShowFade() noexcept
-{
-    const std::uint32_t now = millis();
-
-    constexpr std::uint32_t FadePeriodMs = 1800;
-
-    const std::uint32_t elapsed =
-        now % FadePeriodMs;
-
-    std::uint8_t brightness;
-
-    if (elapsed < FadePeriodMs / 2)
-    {
-        brightness =
-            static_cast<std::uint8_t>(
-                (elapsed * 255) /
-                (FadePeriodMs / 2));
-    }
-    else
-    {
-        brightness =
-            static_cast<std::uint8_t>(
-                255 -
-                ((elapsed - (FadePeriodMs / 2)) * 255) /
-                (FadePeriodMs / 2));
-    }
-
-    const std::uint32_t color =
-        ColorForAmbient(m_currentColor);
-
-    const std::uint8_t r =
-        static_cast<std::uint8_t>(
-            ((color >> 16) & 0xFF) *
-            brightness / 255);
-
-    const std::uint8_t g =
-        static_cast<std::uint8_t>(
-            ((color >> 8) & 0xFF) *
-            brightness / 255);
-
-    const std::uint8_t b =
-        static_cast<std::uint8_t>(
-            (color & 0xFF) *
-            brightness / 255);
-
-    for (std::uint8_t i = 0;
-         i < LedCount;
-         ++i)
-    {
-        m_strip.setPixelColor(
-            i,
-            r,
-            g,
-            b);
-    }
-
-    m_strip.show();
-}
-
-//=============================================================================
-// FADE SECUENCIAL
-//=============================================================================
-
-void AmbientLightController::ShowSequentialFade() noexcept
-{
-    const std::uint32_t now = millis();
-
-    constexpr std::uint32_t LedPeriodMs = 900;
-
-    const std::uint32_t color =
-        ColorForAmbient(m_currentColor);
-
-    const std::uint8_t r =
-        static_cast<std::uint8_t>(
-            (color >> 16) & 0xFF);
-
-    const std::uint8_t g =
-        static_cast<std::uint8_t>(
-            (color >> 8) & 0xFF);
-
-    const std::uint8_t b =
-        static_cast<std::uint8_t>(
-            color & 0xFF);
-
-    for (std::uint8_t led = 0;
-         led < LedCount;
-         ++led)
-    {
-        const std::uint32_t phase =
-            (now +
-             (led * (LedPeriodMs / 4))) %
-            LedPeriodMs;
-
-        std::uint8_t brightness;
-
-        if (phase < LedPeriodMs / 2)
-        {
-            brightness =
-                static_cast<std::uint8_t>(
-                    (phase * 255) /
-                    (LedPeriodMs / 2));
-        }
-        else
-        {
-            brightness =
-                static_cast<std::uint8_t>(
-                    255 -
-                    ((phase -
-                      (LedPeriodMs / 2)) * 255) /
-                    (LedPeriodMs / 2));
-        }
-
-        SetPixelScaled(
-            led,
-            r,
-            g,
-            b,
-            brightness);
-    }
-
-    m_strip.show();
-}
-
-//=============================================================================
-// FADE ALTERNO
-//=============================================================================
-
-void AmbientLightController::ShowAlternateFade() noexcept
-{
-    const std::uint32_t now = millis();
-
-    constexpr std::uint32_t PeriodMs = 1200;
-
-    const std::uint32_t phase =
-        now % PeriodMs;
-
-    std::uint8_t brightnessA;
-    std::uint8_t brightnessB;
-
-    if (phase < PeriodMs / 2)
-    {
-        brightnessA =
-            static_cast<std::uint8_t>(
-                (phase * 255) /
-                (PeriodMs / 2));
-
-        brightnessB =
-            static_cast<std::uint8_t>(
-                255 -
-                brightnessA);
-    }
-    else
-    {
-        brightnessA =
-            static_cast<std::uint8_t>(
-                255 -
-                ((phase -
-                  (PeriodMs / 2)) * 255) /
-                (PeriodMs / 2));
-
-        brightnessB =
-            static_cast<std::uint8_t>(
-                255 -
-                brightnessA);
-    }
-
-    const std::uint32_t color =
-        ColorForAmbient(m_currentColor);
-
-    const std::uint8_t r =
-        static_cast<std::uint8_t>(
-            (color >> 16) & 0xFF);
-
-    const std::uint8_t g =
-        static_cast<std::uint8_t>(
-            (color >> 8) & 0xFF);
-
-    const std::uint8_t b =
-        static_cast<std::uint8_t>(
-            color & 0xFF);
-
-    for (std::uint8_t led = 0;
-         led < LedCount;
-         ++led)
-    {
-        const bool even =
-            (led % 2) == 0;
-
-        SetPixelScaled(
-            led,
-            r,
-            g,
-            b,
-            even
-                ? brightnessA
-                : brightnessB);
-    }
-
-    m_strip.show();
-}
-
-//=============================================================================
-// BLINK RAPIDO
-//=============================================================================
-
-void AmbientLightController::ShowFastBlink() noexcept
-{
-    constexpr std::uint32_t PeriodMs = 180;
-
-    const bool on =
-        ((millis() / PeriodMs) % 2) == 0;
-
-    if (on)
-    {
-        ShowCurrentColor();
-    }
-    else
-    {
-        SetAll(
-            m_strip.Color(0, 0, 0));
-    }
-}
-
-//=============================================================================
-// BLINK LENTO
-//=============================================================================
-
-void AmbientLightController::ShowSlowBlink() noexcept
-{
-    constexpr std::uint32_t PeriodMs = 700;
-
-    const bool on =
-        ((millis() / PeriodMs) % 2) == 0;
-
-    if (on)
-    {
-        ShowCurrentColor();
-    }
-    else
-    {
-        SetAll(
-            m_strip.Color(0, 0, 0));
-    }
-}
-
-//=============================================================================
-// PULSE
-//=============================================================================
-
-void AmbientLightController::ShowPulse() noexcept
-{
-    constexpr std::uint32_t PeriodMs = 1400;
-
-    const std::uint32_t phase =
-        millis() % PeriodMs;
-
-    std::uint8_t brightness;
-
-    if (phase < PeriodMs / 2)
-    {
-        brightness =
-            static_cast<std::uint8_t>(
-                40 +
-                ((phase * 215) /
-                 (PeriodMs / 2)));
-    }
-    else
-    {
-        brightness =
-            static_cast<std::uint8_t>(
-                255 -
-                (((phase -
-                   (PeriodMs / 2)) * 215) /
-                 (PeriodMs / 2)));
-    }
-
-    const std::uint32_t color =
-        ColorForAmbient(m_currentColor);
-
-    const std::uint8_t r =
-        static_cast<std::uint8_t>(
-            (color >> 16) & 0xFF);
-
-    const std::uint8_t g =
-        static_cast<std::uint8_t>(
-            (color >> 8) & 0xFF);
-
-    const std::uint8_t b =
-        static_cast<std::uint8_t>(
-            color & 0xFF);
-
-    for (std::uint8_t led = 0;
-         led < LedCount;
-         ++led)
-    {
-        SetPixelScaled(
-            led,
-            r,
-            g,
-            b,
-            brightness);
-    }
-
-    m_strip.show();
-}
-
-//=============================================================================
-// POLICE
-//
-// Este efecto NO depende de AmbientEffect.
-//
-// Es un estado especial del selector de COLOR.
-//
-// Comportamiento:
-//   Azul -> Rojo -> Azul -> Rojo
-//
-// Pares y nones se alternan lentamente.
-//=============================================================================
-
-void AmbientLightController::ShowPolice() noexcept
-{
-    constexpr std::uint32_t PolicePeriodMs = 1000;
-
-    const bool state =
-        ((millis() / PolicePeriodMs) % 2) == 0;
-
-    const std::uint32_t blue =
-        m_strip.Color(
-            0,
-            50,
-            255);
-
-    const std::uint32_t red =
-        m_strip.Color(
-            255,
-            0,
-            0);
-
-    for (std::uint8_t led = 0;
-         led < LedCount;
-         ++led)
-    {
-        const bool even =
-            (led % 2) == 0;
-
-        if (state)
-        {
-            m_strip.setPixelColor(
-                led,
-                even
-                    ? blue
-                    : red);
-        }
-        else
-        {
-            m_strip.setPixelColor(
-                led,
-                even
-                    ? red
-                    : blue);
-        }
-    }
-
-    m_strip.show();
-}
-
-//=============================================================================
-// RAINBOW
-//=============================================================================
-
-void AmbientLightController::ShowRainbow() noexcept
-{
-    constexpr std::uint8_t SectionSize = 64;
-
-    for (std::uint8_t led = 0;
-         led < LedCount;
-         ++led)
-    {
-        const std::uint8_t position =
-            static_cast<std::uint8_t>(
-                m_rainbowOffset +
-                (led * SectionSize));
-
-        m_strip.setPixelColor(
-            led,
-            Wheel(position));
-    }
-
-    m_strip.show();
-}
-
-//=============================================================================
-// Wheel
-//=============================================================================
+// -----------------------------------------------------------------------------
+// Rainbow wheel
+// -----------------------------------------------------------------------------
 
 std::uint32_t AmbientLightController::Wheel(
-    std::uint8_t position) const noexcept
+std::uint8_t position) const noexcept
 {
-    position =
-        255 - position;
+position = 255 - position;
 
-    if (position < 85)
-    {
-        return m_strip.Color(
-            255 - position * 3,
-            0,
-            position * 3);
-    }
 
-    if (position < 170)
-    {
-        position -= 85;
+if (position < 85)
+{
+    return m_strip.Color(
+        255 - position * 3,
+        0,
+        position * 3);
+}
 
-        return m_strip.Color(
-            0,
-            position * 3,
-            255 - position * 3);
-    }
-
-    position -= 170;
+if (position < 170)
+{
+    position -= 85;
 
     return m_strip.Color(
+        0,
         position * 3,
-        255 - position * 3,
-        0);
+        255 - position * 3);
 }
 
-//=============================================================================
-// SetAll
-//=============================================================================
+position -= 170;
 
-void AmbientLightController::SetAll(
-    std::uint32_t color) noexcept
-{
-    for (std::uint8_t led = 0;
-         led < LedCount;
-         ++led)
-    {
-        m_strip.setPixelColor(
-            led,
-            color);
-    }
+return m_strip.Color(
+    position * 3,
+    255 - position * 3,
+    0);
 
-    m_strip.show();
+
 }
 
-//=============================================================================
-// SetPixelScaled
-//=============================================================================
-
-void AmbientLightController::SetPixelScaled(
-    std::uint8_t led,
-    std::uint8_t red,
-    std::uint8_t green,
-    std::uint8_t blue,
-    std::uint8_t scale) noexcept
-{
-    const std::uint8_t r =
-        static_cast<std::uint8_t>(
-            (static_cast<std::uint16_t>(red) *
-             scale) / 255);
-
-    const std::uint8_t g =
-        static_cast<std::uint8_t>(
-            (static_cast<std::uint16_t>(green) *
-             scale) / 255);
-
-    const std::uint8_t b =
-        static_cast<std::uint8_t>(
-            (static_cast<std::uint16_t>(blue) *
-             scale) / 255);
-
-    m_strip.setPixelColor(
-        led,
-        m_strip.Color(
-            r,
-            g,
-            b));
 }
-
-//=============================================================================
-// TriangularWave
-//=============================================================================
-
-std::uint8_t AmbientLightController::TriangularWave(
-    std::uint16_t phase) noexcept
-{
-    const std::uint8_t p =
-        static_cast<std::uint8_t>(
-            phase & 0xFF);
-
-    if (p < 128)
-    {
-        return static_cast<std::uint8_t>(
-            p * 2);
-    }
-
-    return static_cast<std::uint8_t>(
-        255 -
-        ((p - 128) * 2));
-}
-
-} // namespace MK

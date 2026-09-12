@@ -8,7 +8,7 @@
  *
  * Ambiente WTF:
  *   Perfil + Turbo mantenido durante 2 segundos:
- *       → Entra / sale del modo WTF.
+ *       → Entra al modo WTF.
  *
  *   WTF activo:
  *       Perfil + Adelante/Atrás
@@ -16,7 +16,11 @@
  *
  *       Perfil + Izquierda/Derecha
  *           → Cambia efecto.
- ******************************************************************************/
+ *
+ *   WTF activo:
+ *       Doble Turbo
+ *           → Sale del modo WTF.
+ ******************************************************************************/ 
 
 #ifndef MK_RECEIVER_CONTROLLER_H
 #define MK_RECEIVER_CONTROLLER_H
@@ -73,7 +77,8 @@ private:
     // Ambiente WTF
     //=========================================================================
 
-    // Procesa la combinación Perfil + Turbo.
+    // Procesa la entrada por Perfil + Turbo mantenido
+    // y la salida mediante doble Turbo.
     void ProcessAmbientWtf(
         const Protocol::DriverCommand& command) noexcept;
 
@@ -135,24 +140,39 @@ private:
 
     bool m_hasLastCommand{false};
 
-     // Estado del vehículo
-        void SendVehicleStatus() noexcept;
+    //=========================================================================
+    // Estado del vehículo
+    //=========================================================================
+
+    void SendVehicleStatus() noexcept;
+
     //=========================================================================
     // Ambiente WTF
     //=========================================================================
 
-    // Indica si Turbo está siendo mantenido junto con Perfil.
+    // Indica que Perfil + Turbo está siendo mantenido.
     bool m_ambientTurboActive{false};
 
     // Momento en que comenzó a mantenerse Perfil + Turbo.
     std::uint32_t m_ambientTurboStartedAt{0};
 
-    // Evita que la combinación vuelva a dispararse mientras
-    // el usuario continúa manteniendo presionado Turbo.
+    // Evita que la pulsación mantenida vuelva a disparar la entrada.
     bool m_ambientTurboTriggered{false};
 
-    // Tiempo necesario para activar/desactivar WTF.
-    static constexpr std::uint32_t AmbientWtfHoldTimeMs = 2000;
+    // Estado anterior de Turbo para detectar el flanco de pulsación.
+    bool m_ambientTurboPressedLastFrame{false};
+
+    // Momento de la última pulsación de Turbo.
+    std::uint32_t m_ambientTurboLastPressAt{0};
+
+    // Ventana máxima entre dos pulsaciones para considerarlas
+    // un doble Turbo.
+    static constexpr std::uint32_t
+        AmbientTurboDoubleClickWindowMs = 500;
+
+    // Tiempo necesario para entrar a WTF.
+    static constexpr std::uint32_t
+        AmbientWtfHoldTimeMs = 2000;
 
     //=========================================================================
     // Estado de las direcciones WTF

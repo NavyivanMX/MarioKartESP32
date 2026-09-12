@@ -9,7 +9,7 @@
  * Ambiente WTF:
  *
  *   Perfil + Turbo durante 2 segundos
- *       -> entra / sale de WTF
+ *       -> entra a WTF
  *
  *   WTF activo:
  *
@@ -24,6 +24,9 @@
  *
  *       Perfil + Right
  *           -> siguiente efecto
+ *
+ *       Doble Turbo
+ *           -> sale de WTF
  *
  * Los comandos continúan siendo procesados normalmente por el vehículo.
  ******************************************************************************/
@@ -132,6 +135,8 @@ bool ReceiverController::Begin() noexcept
     m_ambientTurboActive = false;
     m_ambientTurboStartedAt = 0;
     m_ambientTurboTriggered = false;
+    m_ambientTurboPressedLastFrame = false;
+    m_ambientTurboLastPressAt = 0;
 
     m_ambientDirectionActive = false;
     m_ambientLastDirection = 0;
@@ -356,90 +361,125 @@ void ReceiverController::ProcessAmbientWtf(
     const std::uint32_t now = millis();
 
     //=====================================================================
-    // Detectar Perfil + Turbo
+    // Estado de Turbo
     //=====================================================================
 
     const bool turboPressed =
         command.turbo ==
         Types::Vehicle::Turbo::Enabled;
 
-    //-------------------------------------------------------------
-    // Turbo acaba de presionarse
-    //-------------------------------------------------------------
+    const bool turboJustPressed =
+        turboPressed &&
+        !m_ambientTurboPressedLastFrame;
 
-    if (turboPressed)
+    //=====================================================================
+    // DOBLE TURBO
+    //=====================================================================
+    //
+    // Tanto para entrar como para salir de WTF utilizamos exactamente
+    // el mismo mecanismo:
+    //
+    //      Turbo
+    //        ↓
+    //      pausa
+    //        ↓
+    //      Turbo
+    //
+    // La segunda pulsación debe ocurrir dentro de:
+    //
+    //      AmbientTurboDoubleClickWindowMs
+    //
+    // El estado WTF actual determina si entramos o salimos.
+    //
+
+    if (turboJustPressed)
     {
         //-------------------------------------------------------------
-        // Comenzar temporización
+        // ¿Existe una primera pulsación reciente?
         //-------------------------------------------------------------
 
-        if (!m_ambientTurboActive)
-        {
-            m_ambientTurboActive = true;
-
-            m_ambientTurboStartedAt = now;
-
-            m_ambientTurboTriggered = false;
-        }
-
-        //-------------------------------------------------------------
-        // ¿Ya lleva 2 segundos?
-        //-------------------------------------------------------------
-
-        if (!m_ambientTurboTriggered &&
-            (now - m_ambientTurboStartedAt) >=
-                AmbientWtfHoldTimeMs)
+        if (m_ambientTurboLastPressAt != 0 &&
+            (now - m_ambientTurboLastPressAt) <=
+                AmbientTurboDoubleClickWindowMs)
         {
             //---------------------------------------------------------
-            // Toggle WTF
+            // DOBLE TURBO CONFIRMADO
             //---------------------------------------------------------
 
             m_ambientLights.ToggleWtfMode();
 
-            m_ambientTurboTriggered = true;
+            //---------------------------------------------------------
+            // Reiniciar detector de doble Turbo.
+            //---------------------------------------------------------
+
+            m_ambientTurboLastPressAt = 0;
 
             //---------------------------------------------------------
-            // Al entrar a WTF comenzamos con estado limpio.
+            // Rearmar direcciones WTF.
             //---------------------------------------------------------
 
             m_ambientDirectionActive = false;
             m_ambientLastDirection = 0;
         }
+        else
+        {
+            //---------------------------------------------------------
+            // Primera pulsación de Turbo.
+            //---------------------------------------------------------
 
-        return;
+            m_ambientTurboLastPressAt = now;
+        }
     }
 
     //=====================================================================
-    // Turbo liberado
+    // Expirar primera pulsación
     //=====================================================================
+    //
+    // Si solamente hubo una pulsación y pasó demasiado tiempo,
+    // dejamos de considerarla como parte de un doble Turbo.
+    //
 
-    if (m_ambientTurboActive)
+    if (m_ambientTurboLastPressAt != 0 &&
+        (now - m_ambientTurboLastPressAt) >
+            AmbientTurboDoubleClickWindowMs)
     {
-        m_ambientTurboActive = false;
-
-        m_ambientTurboStartedAt = 0;
-
-        m_ambientTurboTriggered = false;
+        m_ambientTurboLastPressAt = 0;
     }
 
     //=====================================================================
-    // Si no estamos en WTF no procesamos direcciones.
+    // Guardar estado de Turbo
     //=====================================================================
 
-    if (!m_ambientLights.IsWtfMode())
+    m_ambientTurboPressedLastFrame =
+        turboPressed;
+
+    //=====================================================================
+    // WTF ACTIVO
+    //=====================================================================
+    //
+    // Si estamos dentro de WTF, las direcciones continúan funcionando
+    // normalmente.
+    //
+    // El doble Turbo ya fue procesado arriba y, si ocurrió, WTF acaba
+    // de cambiar de estado.
+    //
+
+    if (m_ambientLights.IsWtfMode())
     {
+        ProcessAmbientWtfDirection(command);
+    }
+    else
+    {
+        //-------------------------------------------------------------
+        // Fuera de WTF no existen combinaciones de dirección.
+        //-------------------------------------------------------------
+
         m_ambientDirectionActive = false;
         m_ambientLastDirection = 0;
-
-        return;
     }
-
-    //=====================================================================
-    // Procesar color / efecto
-    //=====================================================================
-
-    ProcessAmbientWtfDirection(command);
 }
+
+
 
 //=============================================================================
 // Procesamiento de dirección WTF
