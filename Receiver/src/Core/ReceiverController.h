@@ -5,6 +5,17 @@
  *
  * Descripción:
  * Controlador principal del Receiver.
+ *
+ * Ambiente WTF:
+ *   Perfil + Turbo mantenido durante 2 segundos:
+ *       → Entra / sale del modo WTF.
+ *
+ *   WTF activo:
+ *       Perfil + Adelante/Atrás
+ *           → Cambia color.
+ *
+ *       Perfil + Izquierda/Derecha
+ *           → Cambia efecto.
  ******************************************************************************/
 
 #ifndef MK_RECEIVER_CONTROLLER_H
@@ -25,6 +36,7 @@
 
 #include "src/Vehicle/VehicleController.h"
 #include "src/Vehicle/RearLightController.h"
+#include "src/Vehicle/AmbientLightController.h"
 
 #include "src/Vehicle/VehicleProfiles/DrivingProfileManager.h"
 
@@ -58,10 +70,16 @@ private:
         const Protocol::DriverCommand& command) noexcept;
 
     //=========================================================================
-    // Estado del vehículo
+    // Ambiente WTF
     //=========================================================================
 
-    void SendVehicleStatus() noexcept;
+    // Procesa la combinación Perfil + Turbo.
+    void ProcessAmbientWtf(
+        const Protocol::DriverCommand& command) noexcept;
+
+    // Procesa las direcciones cuando WTF está activo.
+    void ProcessAmbientWtfDirection(
+        const Protocol::DriverCommand& command) noexcept;
 
 private:
 
@@ -94,6 +112,8 @@ private:
 
     RearLightController m_rearLights;
 
+    AmbientLightController m_ambientLights;
+
     //=========================================================================
     // Driving Profiles
     //=========================================================================
@@ -114,6 +134,36 @@ private:
     Protocol::DriverCommand m_lastCommand{};
 
     bool m_hasLastCommand{false};
+
+     // Estado del vehículo
+        void SendVehicleStatus() noexcept;
+    //=========================================================================
+    // Ambiente WTF
+    //=========================================================================
+
+    // Indica si Turbo está siendo mantenido junto con Perfil.
+    bool m_ambientTurboActive{false};
+
+    // Momento en que comenzó a mantenerse Perfil + Turbo.
+    std::uint32_t m_ambientTurboStartedAt{0};
+
+    // Evita que la combinación vuelva a dispararse mientras
+    // el usuario continúa manteniendo presionado Turbo.
+    bool m_ambientTurboTriggered{false};
+
+    // Tiempo necesario para activar/desactivar WTF.
+    static constexpr std::uint32_t AmbientWtfHoldTimeMs = 2000;
+
+    //=========================================================================
+    // Estado de las direcciones WTF
+    //=========================================================================
+
+    // Evita repetir el cambio de color continuamente mientras
+    // se mantiene la dirección.
+    bool m_ambientDirectionActive{false};
+
+    // Última dirección procesada en WTF.
+    std::int8_t m_ambientLastDirection{0};
 };
 
 } // namespace MK
