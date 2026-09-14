@@ -318,26 +318,58 @@ void ReceiverController::ProcessCommand(
         }
     }
 
-    //=====================================================================
-    // VEHÍCULO
-    //=====================================================================
+   //=====================================================================
+// VEHÍCULO
+//=====================================================================
+//
+// Durante WTF:
+//
+//     Forward  -> bloqueado
+//     Reverse  -> bloqueado
+//     Left     -> bloqueado
+//     Right    -> bloqueado
+//
+// El comando original continúa utilizándose para las funciones de WTF.
+// Solamente neutralizamos el comando que recibe el vehículo.
+//
 
-    m_vehicle.Update(
-        command,
-        m_profileManager.Current());
+Protocol::DriverCommand vehicleCommand =
+    command;
 
-    Serial.print("Current Profile: ");
-    Serial.println(
-        m_profileManager.Current().name);
+if (m_ambientLights.IsWtfMode())
+{
+    //-------------------------------------------------------------
+    // WTF activo:
+    //
+    // El vehículo no debe recibir ninguna orden de movimiento.
+    //-------------------------------------------------------------
 
-    //=====================================================================
-    // REAR LIGHTS
-    //=====================================================================
+    vehicleCommand.direction =
+        Types::Vehicle::Direction::Stop;
 
-    m_rearLights.Update(
-        command,
-        m_profileManager.Current());
+    vehicleCommand.steering =
+        Types::Vehicle::Steering::Straight;
+}
 
+m_vehicle.Update(
+    vehicleCommand,
+    m_profileManager.Current());
+
+Serial.print("Current Profile: ");
+Serial.println(
+    m_profileManager.Current().name);
+
+//=====================================================================
+// REAR LIGHTS
+//=====================================================================
+//
+// Las luces traseras también reciben el comando neutral durante WTF,
+// evitando que indiquen avance, reversa o dirección.
+//
+
+m_rearLights.Update(
+    vehicleCommand,
+    m_profileManager.Current());
     //=====================================================================
     // Siempre informar el perfil actual al Transmitter
     //=====================================================================

@@ -76,6 +76,35 @@ enum class AmbientEffect : std::uint8_t
     FastBlink,
     SlowBlink,
     Pulse,
+    Chase,
+    Scanner,
+    Heartbeat,
+    Sparkle,
+    Lightning,
+    Fire,
+    RainbowChase,
+    RainbowWave,
+    CenterOut,
+    Explosion,
+    RainbowExplosion,
+    CenterPulse,
+    Ripple,
+    AlternatingWave,
+    Strobe,
+    DoubleFlash,
+    Meteor,
+    Breathing,
+    Comet,
+    Wave,
+    Theater,
+    SideFade,
+    MirrorWave,
+    CenterSplit,
+    DualChase,
+    Crossing,
+    SymmetricPulse,
+    CenterPulseWave,
+    SideChase,
     Count
 };
 
@@ -128,9 +157,37 @@ void UpdateAlternateFade() noexcept;
 void UpdateFastBlink() noexcept;
 void UpdateSlowBlink() noexcept;
 void UpdatePulse() noexcept;
-
+void UpdateChase() noexcept;
+void UpdateScanner() noexcept;
+void UpdateHeartbeat() noexcept;
+void UpdateSparkle() noexcept;
+void UpdateLightning() noexcept;
+void UpdateFire() noexcept;
+void UpdateRainbowChase() noexcept;
 void UpdatePolice() noexcept;
 void UpdateRainbow() noexcept;
+void UpdateRainbowWave() noexcept;
+void UpdateCenterOut() noexcept;
+void UpdateExplosion() noexcept;
+void UpdateRainbowExplosion() noexcept;
+void UpdateCenterPulse() noexcept;
+void UpdateRipple() noexcept;
+void UpdateAlternatingWave() noexcept;
+void UpdateStrobe() noexcept;
+void UpdateDoubleFlash() noexcept;
+void UpdateMeteor() noexcept;
+void UpdateBreathing() noexcept;
+void UpdateComet() noexcept;
+void UpdateWave() noexcept;
+void UpdateTheater() noexcept;
+void UpdateSideFade() noexcept;
+void UpdateMirrorWave() noexcept;
+void UpdateCenterSplit() noexcept;
+void UpdateDualChase() noexcept;
+void UpdateCrossing() noexcept;
+void UpdateSymmetricPulse() noexcept;
+void UpdateCenterPulseWave() noexcept;
+void UpdateSideChase() noexcept;
 
 void ShowColor(
     std::uint8_t red,
@@ -174,7 +231,7 @@ std::uint32_t Wheel(
 private:
 
 
-static constexpr std::uint8_t LedCount = 4;
+static constexpr std::uint8_t LedCount = 6;
 static constexpr std::uint8_t LedPin = 19;
 static constexpr std::uint8_t Brightness = 100;
 
