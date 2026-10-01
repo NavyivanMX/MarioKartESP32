@@ -4,25 +4,25 @@
  * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
- * Implementación de comunicación ESP-NOW para el Transmitter.
+ * Implementación de la comunicación ESP-NOW del Transmitter.
  *
- * Permite seleccionar automáticamente uno de dos receptores:
+ * Selección:
  *
- *   1. Kart
- *   2. Laboratorio
+ *   KnownReceiverMacs[0]
+ *          ↓ falla
+ *   KnownReceiverMacs[1]
+ *          ↓ falla
+ *   KnownReceiverMacs[2]
+ *          ↓ ...
+ *   MAC personalizado NVS
  *
- * El primer receptor disponible queda seleccionado durante toda la sesión.
- * Para cambiar de receptor es necesario reiniciar el Transmitter.
+ * Cuando un Receiver responde correctamente, queda seleccionado durante
+ * toda la sesión.
  ******************************************************************************/
 
 #include "ESPNowHandler.h"
 
 #include <cstring>
-
-#include <esp_now.h>
-#include <esp_wifi.h>
-
-#include <MKShared.h>
 
 #include "src/Config/TransmitterConfig.h"
 
@@ -30,107 +30,25 @@
 namespace MK
 {
 
-//=============================================================================
-// Instancia estática
-//=============================================================================
-
 ESPNowHandler* ESPNowHandler::s_instance = nullptr;
-
-
-//=============================================================================
-// Debug
-//=============================================================================
-
-#define ESPNOW_DEBUG 0
-
-
-namespace
-{
-
-//=============================================================================
-// Utilidades
-//=============================================================================
-
-bool IsSuccess(
-    const esp_err_t result) noexcept
-{
-    return result == ESP_OK;
-}
-
-
-//-----------------------------------------------------------------------------
-// Crea información de peer
-//-----------------------------------------------------------------------------
-
-esp_now_peer_info_t CreatePeerInfo(
-    const Types::MacAddress& macAddress)
-{
-    esp_now_peer_info_t peer{};
-
-    std::memcpy(
-        peer.peer_addr,
-        macAddress.data(),
-        macAddress.size());
-
-    peer.channel = MK::RadioConfig::Channel;
-    peer.ifidx = WIFI_IF_STA;
-    peer.encrypt = MK::RadioConfig::Encryption;
-
-    return peer;
-}
-
-} // namespace
 
 
 //=============================================================================
 // Begin
 //=============================================================================
 
-bool ESPNowHandler::Begin()
+bool ESPNowHandler::Begin(
+    bool hasCustomReceiverMac,
+    const Types::MacAddress& customReceiverMac)
 {
-    if (m_initialized)
-    {
-        return true;
-    }
+    m_customReceiverMac = customReceiverMac;
+    m_hasCustomReceiverMac =
+        hasCustomReceiverMac && IsValidMac(customReceiverMac);
 
-    s_instance = this;
+    m_receiverCandidate = 0;
 
-    //-------------------------------------------------------------------------
-    // WiFi
-    //-------------------------------------------------------------------------
-
-    if (!InitializeWiFi())
-    {
-        return false;
-    }
-
-
-    //-------------------------------------------------------------------------
-    // ESP-NOW
-    //-------------------------------------------------------------------------
-
-    if (!InitializeESPNow())
-    {
-        return false;
-    }
-
-
-    //-------------------------------------------------------------------------
-    // Registrar receptores
-    //-------------------------------------------------------------------------
-
-    if (!RegisterPeers())
-    {
-        return false;
-    }
-
-
-    //-------------------------------------------------------------------------
-    // Estado inicial
-    //-------------------------------------------------------------------------
-
+    m_selectedReceiver = {};
     m_receiverSelected = false;
-    m_receiverCandidate = KartReceiverIndex;
 
     m_transmissionPending = false;
     m_transmissionResultAvailable = false;
@@ -138,17 +56,65 @@ bool ESPNowHandler::Begin()
 
     m_vehicleStatusAvailable = false;
 
+    if (!InitializeWiFi())
+    {
+        Serial.println(
+            "ESP-NOW: WiFi initialization failed.");
+
+        return false;
+    }
+
+
+    if (!InitializeESPNow())
+    {
+        Serial.println(
+            "ESP-NOW: initialization failed.");
+
+        return false;
+    }
+
+
+    if (!RegisterPeers())
+    {
+        Serial.println(
+            "ESP-NOW: peer registration failed.");
+
+        return false;
+    }
+
+
     m_initialized = true;
 
+    s_instance = this;
 
-#if ESPNOW_DEBUG
+
+    Serial.println();
     Serial.println(
-        "[ESP-NOW] Inicializado.");
+        "========== ESP-NOW ==========");
+
+    Serial.printf(
+        "Known receivers: %u\n",
+        static_cast<unsigned int>(
+            TransmitterConfig::KnownReceiverMacCount));
+
+
+    if (m_hasCustomReceiverMac)
+    {
+        Serial.println(
+            "Custom receiver: CONFIGURED");
+    }
+    else
+    {
+        Serial.println(
+            "Custom receiver: NONE");
+    }
+
 
     Serial.println(
-        "[ESP-NOW] Buscando receptor...");
-#endif
+        "Receiver selection: AUTO");
 
+    Serial.println(
+        "==============================");
 
     return true;
 }
@@ -161,21 +127,240 @@ bool ESPNowHandler::Begin()
 void ESPNowHandler::End() noexcept
 {
     if (!m_initialized)
-    {
         return;
-    }
 
-    esp_now_unregister_recv_cb();
-    esp_now_unregister_send_cb();
+    if (s_instance == this)
+        s_instance = nullptr;
 
     esp_now_deinit();
 
-    m_initialized = false;
+    WiFi.disconnect(true);
 
-    if (s_instance == this)
+    m_initialized = false;
+    m_receiverSelected = false;
+
+    m_selectedReceiver = {};
+}
+
+
+//=============================================================================
+// Initialize WiFi
+//=============================================================================
+
+bool ESPNowHandler::InitializeWiFi() noexcept
+{
+    WiFi.mode(WIFI_STA);
+
+    WiFi.disconnect();
+
+    delay(100);
+
+    Serial.print(
+        "ESP-NOW: Transmitter MAC: ");
+
+    Serial.println(
+        WiFi.macAddress());
+
+    Serial.printf(
+        "ESP-NOW: Channel: %u\n",
+        static_cast<unsigned int>(
+            MK::RadioConfig::Channel));
+
+    return true;
+}
+
+//=============================================================================
+// Initialize ESP-NOW
+//=============================================================================
+
+bool ESPNowHandler::InitializeESPNow() noexcept
+{
+    if (esp_now_init() != ESP_OK)
     {
-        s_instance = nullptr;
+        return false;
     }
+
+
+    if (esp_now_register_send_cb(
+            &ESPNowHandler::OnDataSent) != ESP_OK)
+    {
+        return false;
+    }
+
+
+    if (esp_now_register_recv_cb(
+            &ESPNowHandler::OnDataReceive) != ESP_OK)
+    {
+        return false;
+    }
+
+
+    return true;
+}
+
+
+//=============================================================================
+// Register all possible peers
+//=============================================================================
+
+bool ESPNowHandler::RegisterPeers() noexcept
+{
+    bool registeredAtLeastOne = false;
+
+
+    //-------------------------------------------------------------------------
+    // Receptores conocidos
+    //-------------------------------------------------------------------------
+
+    for (std::size_t i = 0;
+         i < TransmitterConfig::KnownReceiverMacCount;
+         ++i)
+    {
+        const auto& mac =
+            TransmitterConfig::KnownReceiverMacs[i];
+
+
+        if (!IsValidMac(mac))
+            continue;
+
+
+        if (RegisterPeer(mac))
+        {
+            registeredAtLeastOne = true;
+
+            Serial.printf(
+                "ESP-NOW: Known receiver %u registered: ",
+                static_cast<unsigned int>(i));
+
+            for (std::size_t j = 0;
+                 j < mac.size();
+                 ++j)
+            {
+                if (j != 0)
+                    Serial.print(':');
+
+                if (mac[j] < 0x10)
+                    Serial.print('0');
+
+                Serial.print(
+                    mac[j],
+                    HEX);
+            }
+
+            Serial.println();
+        }
+    }
+
+
+    //-------------------------------------------------------------------------
+    // Receiver personalizado
+    //-------------------------------------------------------------------------
+
+    if (m_hasCustomReceiverMac)
+    {
+        bool alreadyRegistered = false;
+
+
+        for (std::size_t i = 0;
+             i < TransmitterConfig::KnownReceiverMacCount;
+             ++i)
+        {
+            if (TransmitterConfig::KnownReceiverMacs[i] ==
+                m_customReceiverMac)
+            {
+                alreadyRegistered = true;
+                break;
+            }
+        }
+
+
+        if (!alreadyRegistered)
+        {
+            if (RegisterPeer(m_customReceiverMac))
+            {
+                registeredAtLeastOne = true;
+
+                Serial.print(
+                    "ESP-NOW: Custom receiver registered: ");
+
+                for (std::size_t j = 0;
+                     j < m_customReceiverMac.size();
+                     ++j)
+                {
+                    if (j != 0)
+                        Serial.print(':');
+
+                    if (m_customReceiverMac[j] < 0x10)
+                        Serial.print('0');
+
+                    Serial.print(
+                        m_customReceiverMac[j],
+                        HEX);
+                }
+
+                Serial.println();
+            }
+        }
+    }
+
+
+    return registeredAtLeastOne;
+}
+
+
+//=============================================================================
+// Register one peer
+//=============================================================================
+
+bool ESPNowHandler::RegisterPeer(
+    const Types::MacAddress& macAddress) noexcept
+{
+    if (!IsValidMac(macAddress))
+        return false;
+
+
+    if (esp_now_is_peer_exist(
+            macAddress.data()))
+    {
+        return true;
+    }
+
+
+    esp_now_peer_info_t peerInfo{};
+
+
+    std::memcpy(
+        peerInfo.peer_addr,
+        macAddress.data(),
+        macAddress.size());
+
+
+    peerInfo.channel =
+        MK::RadioConfig::Channel;
+
+    peerInfo.ifidx =
+        WIFI_IF_STA;
+
+    peerInfo.encrypt =
+        MK::RadioConfig::Encryption;
+
+
+    const esp_err_t result =
+        esp_now_add_peer(&peerInfo);
+
+
+    if (result != ESP_OK &&
+        result != ESP_ERR_ESPNOW_EXIST)
+    {
+        Serial.printf(
+            "ESP-NOW: esp_now_add_peer failed: %d\n",
+            static_cast<int>(result));
+
+        return false;
+    }
+
+
+    return true;
 }
 
 
@@ -185,27 +370,22 @@ void ESPNowHandler::End() noexcept
 
 bool ESPNowHandler::Send(
     const std::uint8_t* packet,
-    const std::size_t length) noexcept
+    std::size_t length) noexcept
 {
-    if (!m_initialized)
+    if (!IsInitialized())
+        return false;
+
+
+    if (packet == nullptr ||
+        length == 0)
     {
         return false;
     }
 
-    if (packet == nullptr || length == 0)
-    {
-        return false;
-    }
 
-
-    //=========================================================================
-    // Si todavía estamos esperando confirmación del candidato actual,
-    // NO enviamos nada.
-    //
-    // Esto es importante:
-    //
-    // Nunca enviamos simultáneamente el mismo comando al Kart y al Laboratorio.
-    //=========================================================================
+    //-------------------------------------------------------------------------
+    // Esperar resultado de la transmisión anterior
+    //-------------------------------------------------------------------------
 
     if (m_transmissionPending)
     {
@@ -213,9 +393,10 @@ bool ESPNowHandler::Send(
     }
 
 
-    //=========================================================================
-    // Procesar resultado de la transmisión anterior
-    //=========================================================================
+    //-------------------------------------------------------------------------
+    // Si todavía no tenemos Receiver seleccionado, analizar resultado
+    // anterior.
+    //-------------------------------------------------------------------------
 
     if (!m_receiverSelected &&
         m_transmissionResultAvailable)
@@ -225,66 +406,86 @@ bool ESPNowHandler::Send(
 
         if (m_lastTransmissionSuccessful)
         {
-            //-----------------------------------------------------------------
-            // El candidato actual respondió.
-            //
-            // Lo dejamos seleccionado para toda la sesión.
-            //-----------------------------------------------------------------
+            Types::MacAddress candidate{};
 
-            if (m_receiverCandidate == KartReceiverIndex)
+
+            if (GetCandidateMac(
+                    m_receiverCandidate,
+                    candidate))
             {
-                SelectReceiver(
-                    TransmitterConfig::ReceiverMacAddressKart);
-            }
-            else
-            {
-                SelectReceiver(
-                    TransmitterConfig::ReceiverMacAddressLab);
+                SelectReceiver(candidate);
+
+                Serial.print(
+                    "ESP-NOW: Receiver selected: ");
+
+                for (std::size_t i = 0;
+                     i < candidate.size();
+                     ++i)
+                {
+                    if (i != 0)
+                        Serial.print(':');
+
+                    if (candidate[i] < 0x10)
+                        Serial.print('0');
+
+                    Serial.print(
+                        candidate[i],
+                        HEX);
+                }
+
+                Serial.println();
             }
         }
         else
         {
-            //-----------------------------------------------------------------
-            // El candidato no respondió.
-            //
-            // Pasamos al siguiente.
-            //-----------------------------------------------------------------
+            // ---------------------------------------------------------------
+            // El candidato actual falló.
+            // Avanzamos al siguiente.
+            // ---------------------------------------------------------------
 
-            if (m_receiverCandidate == KartReceiverIndex)
+            ++m_receiverCandidate;
+
+
+            Types::MacAddress nextCandidate{};
+
+
+            if (!GetCandidateMac(
+                    m_receiverCandidate,
+                    nextCandidate))
             {
-                m_receiverCandidate = LabReceiverIndex;
+                Serial.println(
+                    "ESP-NOW: no receiver candidates available.");
 
-#if ESPNOW_DEBUG
-                Serial.println(
-                    "[ESP-NOW] Kart no disponible.");
-                Serial.println(
-                    "[ESP-NOW] Intentando Laboratorio...");
-#endif
+                return false;
             }
-            else
+
+
+            Serial.print(
+                "ESP-NOW: trying next receiver: ");
+
+            for (std::size_t i = 0;
+                 i < nextCandidate.size();
+                 ++i)
             {
-                //-----------------------------------------------------------------
-                // Ninguno respondió.
-                //
-                // Volvemos a intentar desde el Kart.
-                //-----------------------------------------------------------------
+                if (i != 0)
+                    Serial.print(':');
 
-                m_receiverCandidate = KartReceiverIndex;
+                if (nextCandidate[i] < 0x10)
+                    Serial.print('0');
 
-#if ESPNOW_DEBUG
-                Serial.println(
-                    "[ESP-NOW] Ningun receptor disponible.");
-                Serial.println(
-                    "[ESP-NOW] Reiniciando busqueda...");
-#endif
+                Serial.print(
+                    nextCandidate[i],
+                    HEX);
             }
+
+            Serial.println();
         }
     }
 
 
-    //=========================================================================
-    // Si ya tenemos receptor seleccionado
-    //=========================================================================
+    //-------------------------------------------------------------------------
+    // Receiver ya seleccionado
+    //-------------------------------------------------------------------------
 
     if (m_receiverSelected)
     {
@@ -294,82 +495,43 @@ bool ESPNowHandler::Send(
                 packet,
                 length);
 
-        return IsSuccess(result);
-    }
+
+        if (result != ESP_OK)
+        {
+            return false;
+        }
 
 
-    //=========================================================================
-    // Selección automática
-    //=========================================================================
+        m_transmissionPending = true;
 
-    Types::MacAddress candidateMac{};
-
-    if (m_receiverCandidate == KartReceiverIndex)
-    {
-        candidateMac =
-            TransmitterConfig::ReceiverMacAddressKart;
-
-#if ESPNOW_DEBUG
-        Serial.println(
-            "[ESP-NOW] Probando Kart...");
-#endif
-    }
-    else
-    {
-        candidateMac =
-            TransmitterConfig::ReceiverMacAddressLab;
-
-#if ESPNOW_DEBUG
-        Serial.println(
-            "[ESP-NOW] Probando Laboratorio...");
-#endif
+        return true;
     }
 
 
     //-------------------------------------------------------------------------
-    // Si la MAC no está configurada, la consideramos no disponible.
+    // Todavía estamos buscando Receiver
     //-------------------------------------------------------------------------
 
-    if (!IsValidMac(candidateMac))
+    Types::MacAddress candidate{};
+
+
+    if (!GetCandidateMac(
+            m_receiverCandidate,
+            candidate))
     {
-#if ESPNOW_DEBUG
-        if (m_receiverCandidate == KartReceiverIndex)
-        {
-            Serial.println(
-                "[ESP-NOW] MAC del Kart invalida.");
-        }
-        else
-        {
-            Serial.println(
-                "[ESP-NOW] MAC de Laboratorio no configurada.");
-        }
-#endif
-
-        m_transmissionResultAvailable = true;
-        m_lastTransmissionSuccessful = false;
-
         return false;
     }
 
 
-    //=========================================================================
-    // Enviar solamente al candidato actual
-    //=========================================================================
-
     const esp_err_t result =
         esp_now_send(
-            candidateMac.data(),
+            candidate.data(),
             packet,
             length);
 
 
-    if (!IsSuccess(result))
+    if (result != ESP_OK)
     {
-        //---------------------------------------------------------------------
-        // Fallo inmediato de esp_now_send().
-        //---------------------------------------------------------------------
-
-        m_transmissionPending = false;
         m_transmissionResultAvailable = true;
         m_lastTransmissionSuccessful = false;
 
@@ -377,32 +539,26 @@ bool ESPNowHandler::Send(
     }
 
 
-    //-------------------------------------------------------------------------
-    // El paquete fue aceptado para transmisión.
-    //
-    // Ahora esperamos OnDataSent().
-    //-------------------------------------------------------------------------
-
     m_transmissionPending = true;
-    m_transmissionResultAvailable = false;
 
     return true;
 }
 
 
 //=============================================================================
-// ReceiveVehicleStatus
+// Receive VehicleStatus
 //=============================================================================
 
 bool ESPNowHandler::ReceiveVehicleStatus(
     Protocol::VehicleStatus& status) noexcept
 {
     if (!m_vehicleStatusAvailable)
-    {
         return false;
-    }
 
-    status = m_lastVehicleStatus;
+
+    status =
+        m_lastVehicleStatus;
+
 
     m_vehicleStatusAvailable = false;
 
@@ -411,45 +567,34 @@ bool ESPNowHandler::ReceiveVehicleStatus(
 
 
 //=============================================================================
-// Callback: OnDataSent
+// Send callback
 //=============================================================================
 
 void ESPNowHandler::OnDataSent(
-    const wifi_tx_info_t* txInfo,
-    const esp_now_send_status_t status) noexcept
+    const wifi_tx_info_t*,
+    esp_now_send_status_t status) noexcept
 {
-    (void)txInfo;
-
     if (s_instance == nullptr)
-    {
         return;
-    }
 
 
-    //-------------------------------------------------------------------------
-    // El callback solamente actualiza el resultado.
-    //
-    // La selección del receptor se hace posteriormente desde Send(),
-    // evitando modificar estructuras complejas desde el callback WiFi.
-    //-------------------------------------------------------------------------
+    s_instance->m_transmissionPending = false;
 
     s_instance->m_lastTransmissionSuccessful =
         (status == ESP_NOW_SEND_SUCCESS);
-
-    s_instance->m_transmissionPending = false;
 
     s_instance->m_transmissionResultAvailable = true;
 }
 
 
 //=============================================================================
-// Callback: OnDataReceive
+// Receive callback
 //=============================================================================
 
 void ESPNowHandler::OnDataReceive(
     const esp_now_recv_info_t* info,
     const std::uint8_t* data,
-    const int length) noexcept
+    int length) noexcept
 {
     if (s_instance == nullptr ||
         info == nullptr ||
@@ -460,61 +605,12 @@ void ESPNowHandler::OnDataReceive(
     }
 
 
-    //=========================================================================
-    // Tamaño esperado
-    //=========================================================================
-
-    const std::size_t expectedSize =
-        Protocol::PacketSize<Protocol::VehicleStatus>();
-
-    if (static_cast<std::size_t>(length) < expectedSize)
-    {
-        return;
-    }
-
-
-    //=========================================================================
-    // Deserializar
-    //=========================================================================
-
-    Protocol::Packet<Protocol::VehicleStatus> packet{};
-
-    if (!Protocol::PacketSerializer::Deserialize(
-            data,
-            static_cast<std::size_t>(length),
-            packet))
-    {
-        return;
-    }
-
-
-    //=========================================================================
-    // Validar tipo
-    //=========================================================================
-
-    if (packet.header.type !=
-        Protocol::PacketType::VehicleStatus)
-    {
-        return;
-    }
-
-
-    //=========================================================================
-    // Validar payload
-    //=========================================================================
-
-    if (packet.header.payloadSize !=
-        sizeof(Protocol::VehicleStatus))
-    {
-        return;
-    }
-
-
-    //=========================================================================
-    // Identificar receptor
-    //=========================================================================
+    //-------------------------------------------------------------------------
+    // Convert sender MAC
+    //-------------------------------------------------------------------------
 
     Types::MacAddress senderMac{};
+
 
     std::memcpy(
         senderMac.data(),
@@ -522,207 +618,166 @@ void ESPNowHandler::OnDataReceive(
         senderMac.size());
 
 
-    //=========================================================================
-    // Solamente aceptamos respuestas de nuestros receptores configurados.
-    //=========================================================================
+    //-------------------------------------------------------------------------
+    // Solamente aceptamos mensajes de Receivers configurados
+    //-------------------------------------------------------------------------
 
-    if (!s_instance->IsConfiguredReceiver(senderMac))
+    if (!s_instance->IsConfiguredReceiver(
+            senderMac))
     {
         return;
     }
 
 
-    //=========================================================================
-    // Si todavía no había receptor seleccionado, la respuesta confirma
-    // directamente cuál receptor está disponible.
-    //=========================================================================
+    //-------------------------------------------------------------------------
+    // Si todavía no tenemos Receiver seleccionado, el que acaba de responder
+    // se convierte inmediatamente en el seleccionado.
+    //-------------------------------------------------------------------------
 
     if (!s_instance->m_receiverSelected)
     {
         s_instance->SelectReceiver(senderMac);
 
-        s_instance->m_transmissionPending = false;
-        s_instance->m_transmissionResultAvailable = false;
+        Serial.print(
+            "ESP-NOW: Receiver selected from response: ");
+
+        for (std::size_t i = 0;
+             i < senderMac.size();
+             ++i)
+        {
+            if (i != 0)
+                Serial.print(':');
+
+            if (senderMac[i] < 0x10)
+                Serial.print('0');
+
+            Serial.print(
+                senderMac[i],
+                HEX);
+        }
+
+        Serial.println();
     }
     else
     {
-        //---------------------------------------------------------------------
-        // Si ya tenemos receptor seleccionado, ignoramos cualquier respuesta
-        // proveniente de otro receptor.
-        //---------------------------------------------------------------------
-
-        if (senderMac != s_instance->m_selectedReceiver)
+        // Si ya tenemos Receiver seleccionado, ignoramos cualquier otro.
+        if (senderMac !=
+            s_instance->m_selectedReceiver)
         {
             return;
         }
     }
 
 
-    //=========================================================================
-    // Guardar VehicleStatus
-    //=========================================================================
+    //-------------------------------------------------------------------------
+    // Validar tamaño mínimo del paquete
+    //-------------------------------------------------------------------------
+
+    if (static_cast<std::size_t>(length) <
+        sizeof(Protocol::PacketHeader))
+    {
+        return;
+    }
+
+
+    //-------------------------------------------------------------------------
+    // Copiar header
+    //-------------------------------------------------------------------------
+
+    Protocol::PacketHeader header{};
+
+    std::memcpy(
+        &header,
+        data,
+        sizeof(header));
+
+
+    if (header.type !=
+        Protocol::PacketType::VehicleStatus)
+    {
+        return;
+    }
+
+
+    if (header.payloadSize !=
+        sizeof(Protocol::VehicleStatus))
+    {
+        return;
+    }
+
+
+    const std::size_t expectedSize =
+        sizeof(Protocol::PacketHeader) +
+        sizeof(Protocol::VehicleStatus);
+
+
+    if (static_cast<std::size_t>(length) <
+        expectedSize)
+    {
+        return;
+    }
+
+
+    //-------------------------------------------------------------------------
+    // Copiar VehicleStatus
+    //-------------------------------------------------------------------------
+
+    Protocol::VehicleStatus vehicleStatus{};
+
+
+    std::memcpy(
+        &vehicleStatus,
+        data + sizeof(Protocol::PacketHeader),
+        sizeof(Protocol::VehicleStatus));
+
 
     s_instance->m_lastVehicleStatus =
-        packet.payload;
+        vehicleStatus;
 
     s_instance->m_vehicleStatusAvailable = true;
 }
 
 
 //=============================================================================
-// InitializeWiFi
+// Get candidate MAC
 //=============================================================================
 
-bool ESPNowHandler::InitializeWiFi() noexcept
-{
-    WiFi.mode(WIFI_STA);
-
-    WiFi.disconnect();
-
-    const esp_err_t result =
-        esp_wifi_set_channel(
-            MK::RadioConfig::Channel,
-            WIFI_SECOND_CHAN_NONE);
-
-    return IsSuccess(result);
-}
-
-
-//=============================================================================
-// InitializeESPNow
-//=============================================================================
-
-bool ESPNowHandler::InitializeESPNow() noexcept
-{
-    if (!IsSuccess(esp_now_init()))
-    {
-        return false;
-    }
-
-
-    //-------------------------------------------------------------------------
-    // Callback de transmisión
-    //-------------------------------------------------------------------------
-
-    if (!IsSuccess(
-            esp_now_register_send_cb(
-                &ESPNowHandler::OnDataSent)))
-    {
-        return false;
-    }
-
-
-    //-------------------------------------------------------------------------
-    // Callback de recepción
-    //-------------------------------------------------------------------------
-
-    if (!IsSuccess(
-            esp_now_register_recv_cb(
-                &ESPNowHandler::OnDataReceive)))
-    {
-        return false;
-    }
-
-
-    return true;
-}
-
-
-//=============================================================================
-// RegisterPeers
-//=============================================================================
-
-bool ESPNowHandler::RegisterPeers() noexcept
+bool ESPNowHandler::GetCandidateMac(
+    std::size_t index,
+    Types::MacAddress& macAddress) const noexcept
 {
     //-------------------------------------------------------------------------
-    // Kart
+    // Primero todos los MAC conocidos
     //-------------------------------------------------------------------------
 
-    if (!RegisterPeer(
-            TransmitterConfig::ReceiverMacAddressKart))
+    if (index <
+        TransmitterConfig::KnownReceiverMacCount)
     {
-        return false;
+        macAddress =
+            TransmitterConfig::KnownReceiverMacs[index];
+
+        return IsValidMac(macAddress);
     }
 
 
     //-------------------------------------------------------------------------
-    // Laboratorio
-    //
-    // Solamente lo registramos si tiene una MAC válida.
-    // Esto permite que el Transmitter siga funcionando con el Kart mientras
-    // todavía no se configura la MAC del laboratorio.
+    // Después el MAC personalizado
     //-------------------------------------------------------------------------
 
-    if (IsValidMac(
-            TransmitterConfig::ReceiverMacAddressLab))
+    if (index ==
+        TransmitterConfig::KnownReceiverMacCount)
     {
-        if (!RegisterPeer(
-                TransmitterConfig::ReceiverMacAddressLab))
-        {
+        if (!m_hasCustomReceiverMac)
             return false;
-        }
+
+        macAddress =
+            m_customReceiverMac;
+
+        return IsValidMac(macAddress);
     }
 
 
-    return true;
-}
-
-
-//=============================================================================
-// RegisterPeer
-//=============================================================================
-
-bool ESPNowHandler::RegisterPeer(
-    const Types::MacAddress& macAddress) noexcept
-{
-    if (!IsValidMac(macAddress))
-    {
-        return false;
-    }
-
-
-    esp_now_peer_info_t peer =
-        CreatePeerInfo(macAddress);
-
-
-    //-------------------------------------------------------------------------
-    // Evitar agregar un peer duplicado.
-    //-------------------------------------------------------------------------
-
-    if (esp_now_is_peer_exist(
-            macAddress.data()))
-    {
-        return true;
-    }
-
-
-    const esp_err_t result =
-        esp_now_add_peer(&peer);
-
-
-    if (!IsSuccess(result))
-    {
-        return false;
-    }
-
-
-    //-------------------------------------------------------------------------
-    // Guardamos la estructura correspondiente.
-    //-------------------------------------------------------------------------
-
-    if (macAddress ==
-        TransmitterConfig::ReceiverMacAddressKart)
-    {
-        m_peerKart = peer;
-    }
-    else if (macAddress ==
-             TransmitterConfig::ReceiverMacAddressLab)
-    {
-        m_peerLab = peer;
-    }
-
-
-    return true;
+    return false;
 }
 
 
@@ -736,9 +791,7 @@ bool ESPNowHandler::IsValidMac(
     for (const auto value : macAddress)
     {
         if (value != 0x00)
-        {
             return true;
-        }
     }
 
     return false;
@@ -752,19 +805,33 @@ bool ESPNowHandler::IsValidMac(
 bool ESPNowHandler::IsConfiguredReceiver(
     const Types::MacAddress& macAddress) const noexcept
 {
-    if (macAddress ==
-        TransmitterConfig::ReceiverMacAddressKart)
+    //-------------------------------------------------------------------------
+    // Revisar lista conocida
+    //-------------------------------------------------------------------------
+
+    for (std::size_t i = 0;
+         i < TransmitterConfig::KnownReceiverMacCount;
+         ++i)
+    {
+        if (macAddress ==
+            TransmitterConfig::KnownReceiverMacs[i])
+        {
+            return true;
+        }
+    }
+
+
+    //-------------------------------------------------------------------------
+    // Revisar MAC personalizado
+    //-------------------------------------------------------------------------
+
+    if (m_hasCustomReceiverMac &&
+        macAddress ==
+            m_customReceiverMac)
     {
         return true;
     }
 
-    if (IsValidMac(
-            TransmitterConfig::ReceiverMacAddressLab) &&
-        macAddress ==
-        TransmitterConfig::ReceiverMacAddressLab)
-    {
-        return true;
-    }
 
     return false;
 }
@@ -777,40 +844,14 @@ bool ESPNowHandler::IsConfiguredReceiver(
 void ESPNowHandler::SelectReceiver(
     const Types::MacAddress& macAddress) noexcept
 {
-    m_selectedReceiver = macAddress;
+    if (!IsValidMac(macAddress))
+        return;
+
+
+    m_selectedReceiver =
+        macAddress;
+
     m_receiverSelected = true;
-
-    m_transmissionPending = false;
-    m_transmissionResultAvailable = false;
-
-
-#if ESPNOW_DEBUG
-
-    Serial.print(
-        "[ESP-NOW] Receptor seleccionado: ");
-
-    for (std::size_t i = 0;
-         i < macAddress.size();
-         ++i)
-    {
-        if (i > 0)
-        {
-            Serial.print(":");
-        }
-
-        if (macAddress[i] < 0x10)
-        {
-            Serial.print("0");
-        }
-
-        Serial.print(
-            macAddress[i],
-            HEX);
-    }
-
-    Serial.println();
-
-#endif
 }
 
 
@@ -823,4 +864,4 @@ bool ESPNowHandler::IsInitialized() const noexcept
     return m_initialized;
 }
 
-} // namespace MK
+}

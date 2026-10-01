@@ -168,3 +168,9 @@ docs/_build/
 
 *.swp
 *.lock
+Receiver/build/esp32.esp32.esp32/build.options.json
+Receiver/build/esp32.esp32.esp32/flash_args
+Receiver/build/esp32.esp32.esp32/partitions.csv
+Transmitter/build/esp32.esp32.esp32/build.options.json
+Transmitter/build/esp32.esp32.esp32/flash_args
+Transmitter/build/esp32.esp32.esp32/partitions.csv

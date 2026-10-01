@@ -1,13 +1,23 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
  * Archivo  : TransmitterConfig.h
+ * Autor    : Narciso Ivan Cisneros Acosta
  *
  * Descripción:
  * Configuración específica del Transmitter.
+ *
+ * Los receptores conocidos se mantienen en una lista estática y se recorren
+ * en el orden en que aparecen.
+ *
+ * Si ninguno de los receptores conocidos responde, ESP-NOW intentará utilizar
+ * el receptor personalizado almacenado en NVS.
  ******************************************************************************/
 
 #ifndef MK_TRANSMITTER_CONFIG_H
 #define MK_TRANSMITTER_CONFIG_H
+
+#include <cstddef>
+#include <cstdint>
 
 #include <MKShared.h>
 
@@ -24,50 +34,48 @@ inline constexpr bool InputTestMode = false;
 
 
 //=============================================================================
-// Receptores ESP-NOW
+// Receptores conocidos
 //
-// El orden es importante:
+// IMPORTANTE:
+// El orden de esta lista determina el orden de búsqueda.
 //
-//   0 = Kart
-//   1 = Laboratorio
+// Para agregar otro receptor solamente agrega otro MAC:
 //
-// El Transmitter intenta primero con Kart.
-// Si no responde, intenta con Laboratorio.
-//
-// Una vez seleccionado un receptor, NO cambia durante la sesión.
-// Para cambiar de receptor es necesario reiniciar el Transmitter.
+// {
+//     MAC1,
+//     MAC2,
+//     MAC3,
+//     ...
+// }
 //=============================================================================
 
-//-----------------------------------------------------------------------------
-// MAC del Kart
-//-----------------------------------------------------------------------------
-inline constexpr Types::MacAddress ReceiverMacAddressKart =
+inline constexpr Types::MacAddress KnownReceiverMacs[] =
 {
-    0x28,
-    0x05,
-    0xA5,
-    0x0B,
-    0x42,
-    0xF8
+    // Receiver - Kart
+    {
+        0x28, 0x05, 0xA5, 0x0B, 0x42, 0xF8
+    },
+
+    // Receiver - Laboratorio
+    {
+        0xCC, 0xDB, 0xA7, 0x3E, 0xD7, 0x74
+    }
+
+    // Ejemplo para agregar otro:
+    //
+    // {
+    //     0x11, 0x22, 0x33, 0x44, 0x55, 0x66
+    // }
 };
 
 
-//-----------------------------------------------------------------------------
-// MAC del ESP32 de laboratorio
-//
-// TODO:
-// Reemplazar estos valores por la MAC real del ESP32 de laboratorio.
-//-----------------------------------------------------------------------------
-inline constexpr Types::MacAddress ReceiverMacAddressLab =
-{
-    0xCC,
-    0xDB,
-    0xA7,
-    0x3E,
-    0xD7,
-    0x74
-};
+//=============================================================================
+// Cantidad de receptores conocidos
+//=============================================================================
 
-} // namespace MK::TransmitterConfig
+inline constexpr std::size_t KnownReceiverMacCount =
+    sizeof(KnownReceiverMacs) / sizeof(KnownReceiverMacs[0]);
 
-#endif // MK_TRANSMITTER_CONFIG_H
+}
+
+#endif
