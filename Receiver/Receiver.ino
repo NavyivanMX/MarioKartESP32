@@ -27,6 +27,7 @@ void setup()
 {
     if (!g_receiverController.Begin())
     {
+        Serial.println("FATAL: ReceiverController::Begin() failed.");
         while (true)
         {
             // Estado de fallo permanente.

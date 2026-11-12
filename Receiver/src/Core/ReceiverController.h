@@ -30,11 +30,13 @@
 //=============================================================================
 
 #include <cstdint>
+#include <cstddef>
 
 #include "src/Communication/BluetoothManager.h"
 #include "src/Communication/ESPNowReceiver.h"
 
 #include "src/Debug/ConsoleLogger.h"
+#include "src/Config/ReceiverPersistentConfig.h"
 
 #include <Protocol/Protocol.h>
 
@@ -88,11 +90,26 @@ private:
 
 private:
 
+    void ProcessSerialConfiguration() noexcept;
+
+    void PrintConfiguration() noexcept;
+
+    [[nodiscard]]
+    bool ParseLedCount(
+        const char* text,
+        std::uint8_t& count) noexcept;
+
+private:
+
     //=========================================================================
     // Debug
     //=========================================================================
 
     ConsoleLogger m_logger;
+    ReceiverPersistentConfig m_persistentConfig;
+
+    char m_serialBuffer[96]{};
+    std::size_t m_serialBufferLength{0};
 
     Protocol::DriverCommand m_lastLoggedCommand{};
     bool m_firstLog = true;

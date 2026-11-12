@@ -18,8 +18,15 @@ namespace MK
 // Begin
 //=============================================================================
 
-bool RearLightController::Begin() noexcept
+bool RearLightController::Begin(std::uint8_t ledCount) noexcept
 {
+    if (ledCount == 0)
+    {
+        ledCount = DefaultLedCount;
+    }
+
+    m_ledCount = ledCount;
+    m_strip.updateLength(m_ledCount);
     m_strip.begin();
 
     m_strip.setBrightness(100);
@@ -881,7 +888,7 @@ void RearLightController::SetColor(
     std::uint8_t green,
     std::uint8_t blue) noexcept
 {
-    for (std::uint8_t i = 0;i < LedCount;++i)
+    for (std::uint8_t i = 0;i < m_ledCount;++i)
     {
         m_strip.setPixelColor(
             i,
@@ -904,7 +911,7 @@ void RearLightController::SetLedColor(
     std::uint8_t green,
     std::uint8_t blue) noexcept
 {
-    if (index >= LedCount)
+    if (index >= m_ledCount)
     {
         return;
     }

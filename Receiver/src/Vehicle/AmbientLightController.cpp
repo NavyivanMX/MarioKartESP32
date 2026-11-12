@@ -17,8 +17,16 @@
 namespace MK
 {
 
-bool AmbientLightController::Begin() noexcept
+bool AmbientLightController::Begin(std::uint8_t ledCount) noexcept
 {
+    if (ledCount == 0)
+    {
+        ledCount = DefaultLedCount;
+    }
+
+    m_ledCount = ledCount;
+    m_strip.updateLength(m_ledCount);
+
 m_strip.begin();
 m_strip.setBrightness(Brightness);
 m_strip.clear();
@@ -871,7 +879,7 @@ const std::uint8_t baseGreen =
 const std::uint8_t baseBlue =
     static_cast<std::uint8_t>(rgb & 0xFF);
 
-for (std::uint8_t led = 0; led < LedCount; ++led)
+for (std::uint8_t led = 0; led < m_ledCount; ++led)
 {
     const std::uint8_t phase =
         static_cast<std::uint8_t>(
@@ -940,7 +948,7 @@ const std::uint8_t green =
 const std::uint8_t blue =
     static_cast<std::uint8_t>(rgb & 0xFF);
 
-for (std::uint8_t led = 0; led < LedCount; ++led)
+for (std::uint8_t led = 0; led < m_ledCount; ++led)
 {
     const bool firstGroup =
         (led % 2) == 0;
@@ -1098,7 +1106,7 @@ void AmbientLightController::UpdateChase() noexcept
      *
      *      1 → 2 → 3 → 4 → 5 → 6 → ...
      *
-     * El efecto utiliza LedCount, por lo que no depende
+     * El efecto utiliza m_ledCount, por lo que no depende
      * directamente de que existan 6 LEDs.
      *
      * La velocidad se controla mediante FadeStepMs.
@@ -1158,7 +1166,7 @@ void AmbientLightController::UpdateChase() noexcept
 
     ++m_effectPhase;
 
-    if (m_effectPhase >= LedCount)
+    if (m_effectPhase >= m_ledCount)
     {
         m_effectPhase = 0;
     }
@@ -1188,7 +1196,7 @@ void AmbientLightController::UpdateScanner() noexcept
      *                      ↓
      *      0 ← 1 ← 2 ← 3 ← 4 ← 5
      *
-     * El efecto utiliza LedCount, por lo que no depende
+     * El efecto utiliza m_ledCount, por lo que no depende
      * directamente de que existan 6 LEDs.
      */
 
@@ -1253,7 +1261,7 @@ void AmbientLightController::UpdateScanner() noexcept
         // 1 → 2 → 3 → 4 → 5 → 6
         //---------------------------------------------------------
 
-        if (m_effectPhase >= (LedCount - 1))
+        if (m_effectPhase >= (m_ledCount - 1))
         {
             m_effectDirection = -1;
             --m_effectPhase;
@@ -1400,7 +1408,7 @@ void AmbientLightController::UpdateHeartbeat() noexcept
          brightness) / 255;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         m_strip.setPixelColor(
@@ -1436,7 +1444,7 @@ void AmbientLightController::UpdateSparkle() noexcept
      * Cada LED puede encenderse con una intensidad diferente,
      * creando una apariencia de pequeñas chispas.
      *
-     * El efecto utiliza LedCount, por lo que no depende
+     * El efecto utiliza m_ledCount, por lo que no depende
      * directamente de que existan 6 LEDs.
      */
 
@@ -1465,7 +1473,7 @@ void AmbientLightController::UpdateSparkle() noexcept
         color & 0xFF;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         /*
@@ -1627,7 +1635,7 @@ void AmbientLightController::UpdateLightning() noexcept
          brightness) / 255;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         m_strip.setPixelColor(
@@ -1665,7 +1673,7 @@ void AmbientLightController::UpdateFire() noexcept
      * Cada actualización genera una nueva intensidad para
      * cada LED, creando un movimiento orgánico y aleatorio.
      *
-     * El efecto utiliza LedCount, por lo que no depende
+     * El efecto utiliza m_ledCount, por lo que no depende
      * directamente de que existan 6 LEDs.
      */
 
@@ -1694,7 +1702,7 @@ void AmbientLightController::UpdateFire() noexcept
         color & 0xFF;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         /*
@@ -1752,7 +1760,7 @@ void AmbientLightController::UpdateRainbowChase() noexcept
      *
      * Cada LED representa una sección diferente del arcoíris.
      *
-     * El efecto utiliza LedCount, por lo que no depende
+     * El efecto utiliza m_ledCount, por lo que no depende
      * directamente de que existan 6 LEDs.
      */
 
@@ -1771,11 +1779,11 @@ void AmbientLightController::UpdateRainbowChase() noexcept
     /*
      * La rueda de color se divide entre los LEDs.
      */
-    static constexpr std::uint8_t ColorSpacing =
-        256 / LedCount;
+    const std::uint8_t ColorSpacing =
+        static_cast<std::uint8_t>(256 / m_ledCount);
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t colorIndex =
@@ -1904,11 +1912,11 @@ void AmbientLightController::UpdateRainbowWave() noexcept
      *
      *      0 → 42 → 84 → 126 → 168 → 210
      */
-    static constexpr std::uint8_t ColorSpacing =
-        256 / LedCount;
+    const std::uint8_t ColorSpacing =
+        static_cast<std::uint8_t>(256 / m_ledCount);
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t colorIndex =
@@ -2013,7 +2021,7 @@ void AmbientLightController::UpdateCenterOut() noexcept
      *
      * Después comienza nuevamente desde el centro.
      *
-     * El efecto utiliza LedCount para mantenerlo adaptable
+     * El efecto utiliza m_ledCount para mantenerlo adaptable
      * a diferentes cantidades de LEDs.
      */
 
@@ -2056,10 +2064,10 @@ void AmbientLightController::UpdateCenterOut() noexcept
      */
 
     const std::uint8_t center =
-        LedCount / 2;
+        m_ledCount / 2;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t distance =
@@ -2122,7 +2130,7 @@ void AmbientLightController::UpdateExplosion() noexcept
      * La luz nace en el centro, se expande rápidamente y
      * después desaparece.
      *
-     * El efecto utiliza LedCount para adaptarse a diferentes
+     * El efecto utiliza m_ledCount para adaptarse a diferentes
      * cantidades de LEDs.
      */
 
@@ -2207,10 +2215,10 @@ void AmbientLightController::UpdateExplosion() noexcept
      */
 
     const std::uint8_t center =
-        LedCount / 2;
+        m_ledCount / 2;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t distance =
@@ -2449,10 +2457,10 @@ void AmbientLightController::UpdateRainbowExplosion() noexcept
     }
 
     const std::uint8_t center =
-        LedCount / 2;
+        m_ledCount / 2;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t distance =
@@ -2583,7 +2591,7 @@ void AmbientLightController::UpdateCenterPulse() noexcept
         color & 0xFF;
 
     const std::uint8_t center =
-        LedCount / 2;
+        m_ledCount / 2;
 
     /*
      * La fase representa el radio actual del pulso.
@@ -2646,7 +2654,7 @@ void AmbientLightController::UpdateCenterPulse() noexcept
          brightness) / 255;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t distance =
@@ -2741,7 +2749,7 @@ void AmbientLightController::UpdateRipple() noexcept
     static constexpr std::uint8_t RippleLength = 3;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         /*
@@ -2814,7 +2822,7 @@ void AmbientLightController::UpdateRipple() noexcept
      * antes de comenzar nuevamente.
      */
     if (m_effectPhase >=
-        (LedCount + RippleLength))
+        (m_ledCount + RippleLength))
     {
         m_effectPhase = 0;
     }
@@ -2892,14 +2900,14 @@ void AmbientLightController::UpdateAlternatingWave() noexcept
         m_effectPhase;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t distanceFromStart =
             led;
 
         const std::uint8_t distanceFromEnd =
-            (LedCount - 1) - led;
+            (m_ledCount - 1) - led;
 
         const std::uint8_t distance =
             (distanceFromStart <
@@ -2938,7 +2946,7 @@ void AmbientLightController::UpdateAlternatingWave() noexcept
      * Reiniciamos para volver a los extremos.
      */
     if (m_effectPhase >=
-        ((LedCount + 1) / 2))
+        ((m_ledCount + 1) / 2))
     {
         m_effectPhase = 0;
     }
@@ -3003,7 +3011,7 @@ void AmbientLightController::UpdateStrobe() noexcept
             : 180;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint16_t scaledRed =
@@ -3123,7 +3131,7 @@ void AmbientLightController::UpdateDoubleFlash() noexcept
          brightness) / 255;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         m_strip.setPixelColor(
@@ -3194,7 +3202,7 @@ void AmbientLightController::UpdateMeteor() noexcept
         color & 0xFF;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::int16_t distance =
@@ -3246,7 +3254,7 @@ void AmbientLightController::UpdateMeteor() noexcept
     ++m_effectPhase;
 
     if (m_effectPhase >=
-        (LedCount + 3))
+        (m_ledCount + 3))
     {
         m_effectPhase = 0;
     }
@@ -3341,7 +3349,7 @@ void AmbientLightController::UpdateBreathing() noexcept
          brightness) / 255;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         m_strip.setPixelColor(
@@ -3404,7 +3412,7 @@ void AmbientLightController::UpdateComet() noexcept
         color & 0xFF;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::int16_t distance =
@@ -3457,7 +3465,7 @@ void AmbientLightController::UpdateComet() noexcept
 
     if (m_effectDirection > 0)
     {
-        if (m_effectPhase >= (LedCount - 1))
+        if (m_effectPhase >= (m_ledCount - 1))
         {
             m_effectDirection = -1;
         }
@@ -3526,7 +3534,7 @@ void AmbientLightController::UpdateWave() noexcept
         color & 0xFF;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t position =
@@ -3627,16 +3635,16 @@ void AmbientLightController::UpdateTheater() noexcept
         color & 0xFF;
 
     const std::uint8_t center =
-        LedCount / 2;
+        m_ledCount / 2;
 
     for (std::uint8_t led = 0;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         const std::uint8_t distanceFromEdge =
             (led < center)
                 ? led
-                : (LedCount - 1 - led);
+                : (m_ledCount - 1 - led);
 
         const bool visible =
             distanceFromEdge <= m_effectPhase;
@@ -3822,7 +3830,7 @@ void AmbientLightController::UpdateSideFade() noexcept
      */
 
     for (std::uint8_t led = 3;
-         led < LedCount;
+         led < m_ledCount;
          ++led)
     {
         m_strip.setPixelColor(
@@ -3886,7 +3894,7 @@ void AmbientLightController::UpdateMirrorWave() noexcept
         color & 0xFF;
 
     const std::uint8_t pairCount =
-        LedCount / 2;
+        m_ledCount / 2;
 
     /*
      * ---------------------------------------------------------
@@ -3919,7 +3927,7 @@ void AmbientLightController::UpdateMirrorWave() noexcept
         pair;
 
     const std::uint8_t rightLed =
-        (LedCount - 1) - pair;
+        (m_ledCount - 1) - pair;
 
     m_strip.setPixelColor(
         leftLed,
@@ -4016,10 +4024,10 @@ void AmbientLightController::UpdateCenterSplit() noexcept
     m_strip.clear();
 
     const std::uint8_t leftLed =
-        (LedCount / 2) - 1 - m_effectPhase;
+        (m_ledCount / 2) - 1 - m_effectPhase;
 
     const std::uint8_t rightLed =
-        (LedCount / 2) + m_effectPhase;
+        (m_ledCount / 2) + m_effectPhase;
 
     m_strip.setPixelColor(
         leftLed,
@@ -4038,7 +4046,7 @@ void AmbientLightController::UpdateCenterSplit() noexcept
     if (m_effectDirection > 0)
     {
         if (m_effectPhase >=
-            ((LedCount / 2) - 1))
+            ((m_ledCount / 2) - 1))
         {
             m_effectDirection = -1;
         }
@@ -4110,7 +4118,7 @@ void AmbientLightController::UpdateDualChase() noexcept
         m_effectPhase;
 
     const std::uint8_t rightLed =
-        (LedCount - 1) - m_effectPhase;
+        (m_ledCount - 1) - m_effectPhase;
 
     m_strip.setPixelColor(
         leftLed,
@@ -4129,7 +4137,7 @@ void AmbientLightController::UpdateDualChase() noexcept
     ++m_effectPhase;
 
     if (m_effectPhase >=
-        (LedCount / 2))
+        (m_ledCount / 2))
     {
         m_effectPhase = 0;
     }
@@ -4300,7 +4308,7 @@ void AmbientLightController::UpdateSymmetricPulse() noexcept
         pair;
 
     const std::uint8_t rightLed =
-        (LedCount - 1) - pair;
+        (m_ledCount - 1) - pair;
 
     const std::uint16_t scaledRed =
         (static_cast<std::uint16_t>(red) *
@@ -4333,7 +4341,7 @@ void AmbientLightController::UpdateSymmetricPulse() noexcept
     ++m_effectPhase;
 
     if (m_effectPhase >=
-        ((LedCount / 2) * 4))
+        ((m_ledCount / 2) * 4))
     {
         m_effectPhase = 0;
     }
@@ -4386,7 +4394,7 @@ void AmbientLightController::UpdateCenterPulseWave() noexcept
         color & 0xFF;
 
     const std::uint8_t center =
-        LedCount / 2;
+        m_ledCount / 2;
 
     m_strip.clear();
 
@@ -4417,7 +4425,7 @@ void AmbientLightController::UpdateCenterPulseWave() noexcept
             pair;
 
         const std::uint8_t rightLed =
-            (LedCount - 1) - pair;
+            (m_ledCount - 1) - pair;
 
         const std::uint16_t scaledRed =
             (static_cast<std::uint16_t>(red) *
@@ -4505,7 +4513,7 @@ void AmbientLightController::UpdateSideChase() noexcept
         m_effectPhase;
 
     const std::uint8_t rightLed =
-        (LedCount - 1) - m_effectPhase;
+        (m_ledCount - 1) - m_effectPhase;
 
     m_strip.clear();
 
@@ -4526,7 +4534,7 @@ void AmbientLightController::UpdateSideChase() noexcept
     ++m_effectPhase;
 
     if (m_effectPhase >=
-        (LedCount / 2))
+        (m_ledCount / 2))
     {
         m_effectPhase = 0;
     }
@@ -4573,7 +4581,7 @@ void AmbientLightController::UpdatePolice() noexcept
 
     m_effectState = !m_effectState;
 
-    for (std::uint8_t led = 0; led < LedCount; ++led)
+    for (std::uint8_t led = 0; led < m_ledCount; ++led)
     {
         const bool firstGroup =
             (led % 2) == 0;
@@ -4640,7 +4648,7 @@ if ((now - m_lastRainbowUpdate) <
 
 m_lastRainbowUpdate = now;
 
-for (std::uint8_t led = 0; led < LedCount; ++led)
+for (std::uint8_t led = 0; led < m_ledCount; ++led)
 {
     const std::uint8_t position =
         static_cast<std::uint8_t>(
@@ -4669,7 +4677,7 @@ std::uint8_t red,
 std::uint8_t green,
 std::uint8_t blue) noexcept
 {
-for (std::uint8_t led = 0; led < LedCount; ++led)
+for (std::uint8_t led = 0; led < m_ledCount; ++led)
 {
 m_strip.setPixelColor(
 led,

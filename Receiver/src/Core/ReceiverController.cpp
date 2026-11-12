@@ -36,6 +36,7 @@
 #include "src/Config/BluetoothConfig.h"
 
 #include <cstring>
+#include <cstdlib>
 
 namespace MK
 {
@@ -54,10 +55,35 @@ bool ReceiverController::Begin() noexcept
     m_logger.LogBoot();
 
     //-------------------------------------------------------------
+    // Configuración persistente
+    //-------------------------------------------------------------
+
+    if (!m_persistentConfig.Begin())
+    {
+        m_logger.LogError(
+            "Receiver persistent configuration failed.");
+
+        return false;
+    }
+
+    Serial.println();
+    Serial.println("========== Receiver Configuration ==========");
+    Serial.printf(
+        "Ambient LEDs: %u\n",
+        static_cast<unsigned int>(
+            m_persistentConfig.GetAmbientLedCount()));
+    Serial.printf(
+        "Rear LEDs: %u\n",
+        static_cast<unsigned int>(
+            m_persistentConfig.GetRearLedCount()));
+    Serial.println("============================================");
+
+    //-------------------------------------------------------------
     // Rear Lights
     //-------------------------------------------------------------
 
-    if (!m_rearLights.Begin())
+    if (!m_rearLights.Begin(
+        m_persistentConfig.GetRearLedCount()))
     {
         m_logger.LogError("Rear lights initialization failed.");
         return false;
@@ -113,7 +139,8 @@ bool ReceiverController::Begin() noexcept
     // Ambient Lights
     //-------------------------------------------------------------
 
-    if (!m_ambientLights.Begin())
+    if (!m_ambientLights.Begin(
+        m_persistentConfig.GetAmbientLedCount()))
     {
         m_logger.LogError(
             "Ambient lights initialization failed.");
@@ -156,6 +183,8 @@ bool ReceiverController::Begin() noexcept
 
 void ReceiverController::Update() noexcept
 {
+    ProcessSerialConfiguration();
+
     //=====================================================================
     // Ambiente
     //=====================================================================
@@ -656,5 +685,125 @@ void ReceiverController::SendVehicleStatus() noexcept
 
     m_bluetoothManager.Send(status);
 }
+
+
+//=============================================================================
+// Configuración por puerto serie (MKCFG)
+//=============================================================================
+
+void ReceiverController::PrintConfiguration() noexcept
+{
+    Serial.println("MKCFG CONFIGURATION");
+    Serial.printf("MKCFG AMBIENT_LEDS=%u\n",
+        static_cast<unsigned int>(m_persistentConfig.GetAmbientLedCount()));
+    Serial.printf("MKCFG REAR_LEDS=%u\n",
+        static_cast<unsigned int>(m_persistentConfig.GetRearLedCount()));
+}
+
+bool ReceiverController::ParseLedCount(
+    const char* text,
+    std::uint8_t& count) noexcept
+{
+    if (text == nullptr || *text == '\0')
+        return false;
+
+    char* end = nullptr;
+    const long value = std::strtol(text, &end, 10);
+    if (end == text || *end != '\0' || value < 1 || value > 255)
+        return false;
+
+    count = static_cast<std::uint8_t>(value);
+    return true;
+}
+
+void ReceiverController::ProcessSerialConfiguration() noexcept
+{
+    while (Serial.available() > 0)
+    {
+        const int incoming = Serial.read();
+        if (incoming < 0)
+            return;
+
+        const char ch = static_cast<char>(incoming);
+        if (ch == '\r')
+            continue;
+
+        if (ch != '\n')
+        {
+            if (m_serialBufferLength < sizeof(m_serialBuffer) - 1)
+            {
+                m_serialBuffer[m_serialBufferLength++] = ch;
+                m_serialBuffer[m_serialBufferLength] = '\0';
+            }
+            else
+            {
+                m_serialBufferLength = 0;
+                m_serialBuffer[0] = '\0';
+                Serial.println("MKCFG ERROR COMMAND_TOO_LONG");
+            }
+            continue;
+        }
+
+        m_serialBuffer[m_serialBufferLength] = '\0';
+        char* command = m_serialBuffer;
+        while (*command == ' ' || *command == '\t') ++command;
+
+        if (std::strcmp(command, "MKCFG GET") == 0)
+        {
+            PrintConfiguration();
+        }
+        else if (std::strcmp(command, "MKCFG CLEAR") == 0)
+        {
+            if (m_persistentConfig.Clear())
+            {
+                Serial.println("MKCFG OK");
+                PrintConfiguration();
+                Serial.println("MKCFG RESTART_REQUIRED");
+            }
+            else
+            {
+                Serial.println("MKCFG ERROR CLEAR_FAILED");
+            }
+        }
+        else if (std::strncmp(command, "MKCFG SET AMBIENT_LEDS=", 23) == 0)
+        {
+            std::uint8_t count = 0;
+            const char* value = command + 23;
+            if (ParseLedCount(value, count) && m_persistentConfig.SetAmbientLedCount(count))
+            {
+                Serial.println("MKCFG OK");
+                PrintConfiguration();
+                Serial.println("MKCFG RESTART_REQUIRED");
+            }
+            else
+            {
+                Serial.println("MKCFG ERROR INVALID_AMBIENT_LEDS");
+            }
+        }
+        else if (std::strncmp(command, "MKCFG SET REAR_LEDS=", 20) == 0)
+        {
+            std::uint8_t count = 0;
+            const char* value = command + 20;
+            if (ParseLedCount(value, count) && m_persistentConfig.SetRearLedCount(count))
+            {
+                Serial.println("MKCFG OK");
+                PrintConfiguration();
+                Serial.println("MKCFG RESTART_REQUIRED");
+            }
+            else
+            {
+                Serial.println("MKCFG ERROR INVALID_REAR_LEDS");
+            }
+        }
+        else if (*command != '\0')
+        {
+            Serial.println("MKCFG ERROR UNKNOWN_COMMAND");
+        }
+
+        m_serialBufferLength = 0;
+        m_serialBuffer[0] = '\0';
+    }
+}
+
 
 } // namespace MK
