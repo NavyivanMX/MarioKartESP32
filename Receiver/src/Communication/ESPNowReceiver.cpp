@@ -8,6 +8,8 @@
  ******************************************************************************/
 
 #include "ESPNowReceiver.h"
+#include <esp_wifi.h>
+
 
 #include <cstring>
 
@@ -63,6 +65,66 @@ bool ESPNowReceiver::Begin()
     //---------------------------------------------------------------------
 
     WiFi.mode(WIFI_STA);
+
+    uint8_t mac[6] = {};
+
+esp_err_t result = esp_wifi_get_mac(WIFI_IF_STA, mac);
+
+if (result == ESP_OK)
+{
+    Serial.printf(
+        "ESP-NOW: Receiver STA MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+        mac[0], mac[1], mac[2],
+        mac[3], mac[4], mac[5]
+    );
+}
+else
+{
+    Serial.printf(
+        "ESP-NOW: Error reading STA MAC: %s\n",
+        esp_err_to_name(result)
+    );
+}
+//---------------------------------------------------------------------
+// Configurar canal ESP-NOW
+//---------------------------------------------------------------------
+
+    const esp_err_t channelResult =
+        esp_wifi_set_channel(
+            RadioConfig::Channel,
+            WIFI_SECOND_CHAN_NONE);
+
+    if (channelResult != ESP_OK)
+    {
+        Serial.printf(
+            "ESP-NOW: Failed to set channel: %d\n",
+            static_cast<int>(channelResult));
+
+        s_instance = nullptr;
+        return false;
+    }
+
+    std::uint8_t primaryChannel = 0;
+    wifi_second_chan_t secondaryChannel;
+
+    const esp_err_t queryResult =
+        esp_wifi_get_channel(
+            &primaryChannel,
+            &secondaryChannel);
+
+    if (queryResult != ESP_OK)
+    {
+        s_instance = nullptr;
+        return false;
+    }
+
+    Serial.printf(
+        "ESP-NOW: Receiver MAC: %s\n",
+        WiFi.macAddress().c_str());
+
+    Serial.printf(
+        "ESP-NOW: Actual radio channel: %u\n",
+        primaryChannel);
 
     //---------------------------------------------------------------------
     // Inicializar ESP-NOW
@@ -287,6 +349,17 @@ void ESPNowReceiver::OnReceive(
     const std::uint8_t* data,
     int length)
 {
+
+    Serial.printf(
+    "ESP-NOW RX: From %02X:%02X:%02X:%02X:%02X:%02X | Length: %d\n",
+    info->src_addr[0],
+    info->src_addr[1],
+    info->src_addr[2],
+    info->src_addr[3],
+    info->src_addr[4],
+    info->src_addr[5],
+    length
+);
     //---------------------------------------------------------------------
     // Verificar instancia
     //---------------------------------------------------------------------

@@ -1,6 +1,6 @@
 /******************************************************************************
  * Proyecto : MarioKart ESP32 RC
- * Archivo  : ConsoleLogger.h
+ * Archivo  : ConsoleLogger.cpp
  *
  * Descripción:
  * Módulo de depuración mediante el puerto serie.

@@ -236,14 +236,7 @@ void Controller::Update() noexcept
     // Log de comando
     //=========================================================================
 
-    if (command != m_lastLoggedCommand)
-    {
-        m_consoleLogger.Log(
-            command);
-
-        m_lastLoggedCommand =
-            command;
-    }
+    m_consoleLogger.Log(command);
 
 
     //=========================================================================
@@ -334,26 +327,52 @@ void Controller::UpdateVehicleStatus() noexcept
 {
     Protocol::VehicleStatus status{};
 
-
     if (!m_espNowHandler.ReceiveVehicleStatus(status))
         return;
 
+    m_vehicleStatus = status;
+    m_hasVehicleStatus = true;
 
-    m_vehicleStatus =
-        status;
+    const auto profile = m_vehicleStatus.drivingProfile;
 
+    // Registrar únicamente cuando cambia el perfil.
+    if (!m_hasLoggedProfile ||
+        profile != m_lastLoggedProfile)
+    {
+        const char* profileName = "Unknown";
 
-    m_hasVehicleStatus =
-        true;
+        switch (profile)
+        {
+            case VehicleProfiles::DrivingProfileId::Rookie:
+                profileName = "Rookie";
+                break;
 
+            case VehicleProfiles::DrivingProfileId::Normal:
+                profileName = "Normal";
+                break;
 
-    Serial.print(
-        "VehicleStatus -> Profile: ");
+            case VehicleProfiles::DrivingProfileId::Advanced:
+                profileName = "Advanced";
+                break;
 
+            case VehicleProfiles::DrivingProfileId::Drift:
+                profileName = "Drift";
+                break;
 
-    Serial.println(
-        static_cast<std::uint8_t>(
-            m_vehicleStatus.drivingProfile));
+            case VehicleProfiles::DrivingProfileId::Police:
+                profileName = "Police";
+                break;
+
+            default:
+                break;
+        }
+
+        Serial.print("[STATUS] Driving Profile: ");
+        Serial.println(profileName);
+
+        m_lastLoggedProfile = profile;
+        m_hasLoggedProfile = true;
+    }
 }
 
 

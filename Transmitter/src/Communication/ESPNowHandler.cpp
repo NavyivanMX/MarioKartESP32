@@ -21,6 +21,7 @@
  ******************************************************************************/
 
 #include "ESPNowHandler.h"
+#include <esp_wifi.h>
 
 #include <cstring>
 
@@ -150,23 +151,44 @@ void ESPNowHandler::End() noexcept
 bool ESPNowHandler::InitializeWiFi() noexcept
 {
     WiFi.mode(WIFI_STA);
-
     WiFi.disconnect();
 
     delay(100);
 
-    Serial.print(
-        "ESP-NOW: Transmitter MAC: ");
+    const esp_err_t channelResult =
+        esp_wifi_set_channel(
+            MK::RadioConfig::Channel,
+            WIFI_SECOND_CHAN_NONE);
 
-    Serial.println(
-        WiFi.macAddress());
+    if (channelResult != ESP_OK)
+    {
+        Serial.printf(
+            "ESP-NOW: Failed to set channel: %d\n",
+            static_cast<int>(channelResult));
+
+        return false;
+    }
+
+    std::uint8_t primaryChannel = 0;
+    wifi_second_chan_t secondaryChannel;
+
+    const esp_err_t queryResult =
+        esp_wifi_get_channel(
+            &primaryChannel,
+            &secondaryChannel);
+
+    if (queryResult != ESP_OK)
+        return false;
 
     Serial.printf(
-        "ESP-NOW: Channel: %u\n",
-        static_cast<unsigned int>(
-            MK::RadioConfig::Channel));
+        "ESP-NOW: Transmitter MAC: %s\n",
+        WiFi.macAddress().c_str());
 
-    return true;
+    Serial.printf(
+        "ESP-NOW: Actual radio channel: %u\n",
+        primaryChannel);
+
+    return primaryChannel == MK::RadioConfig::Channel;
 }
 
 //=============================================================================
@@ -368,6 +390,7 @@ bool ESPNowHandler::RegisterPeer(
 // Send
 //=============================================================================
 
+
 bool ESPNowHandler::Send(
     const std::uint8_t* packet,
     std::size_t length) noexcept
@@ -375,13 +398,11 @@ bool ESPNowHandler::Send(
     if (!IsInitialized())
         return false;
 
-
     if (packet == nullptr ||
         length == 0)
     {
         return false;
     }
-
 
     //-------------------------------------------------------------------------
     // Esperar resultado de la transmisión anterior
@@ -391,7 +412,6 @@ bool ESPNowHandler::Send(
     {
         return false;
     }
-
 
     //-------------------------------------------------------------------------
     // Si todavía no tenemos Receiver seleccionado, analizar resultado
@@ -403,11 +423,9 @@ bool ESPNowHandler::Send(
     {
         m_transmissionResultAvailable = false;
 
-
         if (m_lastTransmissionSuccessful)
         {
             Types::MacAddress candidate{};
-
 
             if (GetCandidateMac(
                     m_receiverCandidate,
@@ -428,9 +446,7 @@ bool ESPNowHandler::Send(
                     if (candidate[i] < 0x10)
                         Serial.print('0');
 
-                    Serial.print(
-                        candidate[i],
-                        HEX);
+                    Serial.print(candidate[i], HEX);
                 }
 
                 Serial.println();
@@ -438,16 +454,12 @@ bool ESPNowHandler::Send(
         }
         else
         {
-            // ---------------------------------------------------------------
             // El candidato actual falló.
             // Avanzamos al siguiente.
-            // ---------------------------------------------------------------
 
             ++m_receiverCandidate;
 
-
             Types::MacAddress nextCandidate{};
-
 
             if (!GetCandidateMac(
                     m_receiverCandidate,
@@ -458,7 +470,6 @@ bool ESPNowHandler::Send(
 
                 return false;
             }
-
 
             Serial.print(
                 "ESP-NOW: trying next receiver: ");
@@ -473,15 +484,12 @@ bool ESPNowHandler::Send(
                 if (nextCandidate[i] < 0x10)
                     Serial.print('0');
 
-                Serial.print(
-                    nextCandidate[i],
-                    HEX);
+                Serial.print(nextCandidate[i], HEX);
             }
 
             Serial.println();
         }
     }
-
 
     //-------------------------------------------------------------------------
     // Receiver ya seleccionado
@@ -495,25 +503,26 @@ bool ESPNowHandler::Send(
                 packet,
                 length);
 
-
         if (result != ESP_OK)
         {
+            Serial.printf(
+                "ESP-NOW SEND ERROR: %s (%d)\n",
+                esp_err_to_name(result),
+                static_cast<int>(result));
+
             return false;
         }
-
 
         m_transmissionPending = true;
 
         return true;
     }
 
-
     //-------------------------------------------------------------------------
     // Todavía estamos buscando Receiver
     //-------------------------------------------------------------------------
 
     Types::MacAddress candidate{};
-
 
     if (!GetCandidateMac(
             m_receiverCandidate,
@@ -522,27 +531,30 @@ bool ESPNowHandler::Send(
         return false;
     }
 
-
     const esp_err_t result =
         esp_now_send(
             candidate.data(),
             packet,
             length);
 
-
     if (result != ESP_OK)
     {
+        Serial.printf(
+            "ESP-NOW SEND ERROR: %s (%d)\n",
+            esp_err_to_name(result),
+            static_cast<int>(result));
+
         m_transmissionResultAvailable = true;
         m_lastTransmissionSuccessful = false;
 
         return false;
     }
 
-
     m_transmissionPending = true;
 
     return true;
 }
+
 
 
 //=============================================================================
@@ -570,13 +582,19 @@ bool ESPNowHandler::ReceiveVehicleStatus(
 // Send callback
 //=============================================================================
 
+
 void ESPNowHandler::OnDataSent(
-    const wifi_tx_info_t*,
+    const wifi_tx_info_t* txInfo,
     esp_now_send_status_t status) noexcept
 {
+    (void)txInfo;
+
     if (s_instance == nullptr)
         return;
 
+    static bool lastStatusKnown = false;
+    static esp_now_send_status_t lastStatus =
+        ESP_NOW_SEND_SUCCESS;
 
     s_instance->m_transmissionPending = false;
 
@@ -584,6 +602,19 @@ void ESPNowHandler::OnDataSent(
         (status == ESP_NOW_SEND_SUCCESS);
 
     s_instance->m_transmissionResultAvailable = true;
+
+    // Mostrar solamente cuando cambia el resultado.
+    if (!lastStatusKnown || status != lastStatus)
+    {
+        Serial.printf(
+            "ESP-NOW TX: %s\n",
+            status == ESP_NOW_SEND_SUCCESS
+                ? "CONNECTED"
+                : "TRANSMISSION FAILED");
+
+        lastStatus = status;
+        lastStatusKnown = true;
+    }
 }
 
 
@@ -747,11 +778,10 @@ bool ESPNowHandler::GetCandidateMac(
     Types::MacAddress& macAddress) const noexcept
 {
     //-------------------------------------------------------------------------
-    // Primero todos los MAC conocidos
+    // MAC conocidos
     //-------------------------------------------------------------------------
 
-    if (index <
-        TransmitterConfig::KnownReceiverMacCount)
+    if (index < TransmitterConfig::KnownReceiverMacCount)
     {
         macAddress =
             TransmitterConfig::KnownReceiverMacs[index];
@@ -759,23 +789,31 @@ bool ESPNowHandler::GetCandidateMac(
         return IsValidMac(macAddress);
     }
 
-
     //-------------------------------------------------------------------------
-    // Después el MAC personalizado
+    // MAC personalizado
     //-------------------------------------------------------------------------
 
-    if (index ==
-        TransmitterConfig::KnownReceiverMacCount)
+    if (index == TransmitterConfig::KnownReceiverMacCount)
     {
         if (!m_hasCustomReceiverMac)
             return false;
 
-        macAddress =
-            m_customReceiverMac;
+        // No repetir un MAC que ya está en la lista conocida.
+        for (std::size_t i = 0;
+             i < TransmitterConfig::KnownReceiverMacCount;
+             ++i)
+        {
+            if (TransmitterConfig::KnownReceiverMacs[i] ==
+                m_customReceiverMac)
+            {
+                return false;
+            }
+        }
+
+        macAddress = m_customReceiverMac;
 
         return IsValidMac(macAddress);
     }
-
 
     return false;
 }

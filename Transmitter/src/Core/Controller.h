@@ -26,6 +26,11 @@ class Controller final
 {
 public:
 
+    VehicleProfiles::DrivingProfileId m_lastLoggedProfile =
+        VehicleProfiles::DrivingProfileId::Count;
+
+    bool m_hasLoggedProfile = false;
+
     Controller() = default;
 
     ~Controller() = default;
@@ -62,10 +67,7 @@ private:
 private:
 
     std::uint32_t m_lastTransmitTime = 0;
-
-
-    Protocol::DriverCommand m_lastLoggedCommand{};
-
+    
 
     Protocol::VehicleStatus m_vehicleStatus{};
 

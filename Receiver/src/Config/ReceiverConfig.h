@@ -38,7 +38,7 @@ OriginalTransmitter =
     0xA7,
     0x3D,
     0xA9,
-    0xF0
+    0xFF// 0xF0 esta es la original, la que se usó en el proyecto de MarioKart ESP32 RC
 };
 
 inline constexpr Types::MacAddress
@@ -52,15 +52,28 @@ LaboratoryTransmitter =
     0x3C
 };
 
+inline constexpr Types::MacAddress
+MarioTransmitter =
+{
+    0xC8,
+    0x8A,
+    0x7B,
+    0x8B,
+    0x78,
+    0x54
+};
+
+
 //-----------------------------------------------------------------------------
 // Transmisores autorizados
 //-----------------------------------------------------------------------------
 
-inline constexpr std::array<Types::MacAddress, 2>
+inline constexpr std::array<Types::MacAddress, 3>
 AuthorizedTransmitters
 {
     LaboratoryTransmitter,
-    OriginalTransmitter
+    OriginalTransmitter,
+    MarioTransmitter
 };
 
 //-----------------------------------------------------------------------------

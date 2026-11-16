@@ -51,7 +51,7 @@ inline constexpr bool InputTestMode = false;
 
 inline constexpr Types::MacAddress KnownReceiverMacs[] =
 {
-    // Receiver - Kart
+    // Receiver - Kart Luigi
     {
         0x28, 0x05, 0xA5, 0x0B, 0x42, 0xF8
     },
@@ -59,8 +59,12 @@ inline constexpr Types::MacAddress KnownReceiverMacs[] =
     // Receiver - Laboratorio
     {
         0xCC, 0xDB, 0xA7, 0x3E, 0xD7, 0x74
-    }
+    },
 
+        // Receiver - Mario
+    {                
+        0xC8, 0x8A, 0x7B, 0x8B, 0x73, 0xA4
+    }
     // Ejemplo para agregar otro:
     //
     // {
